@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>SEO Report Generator</title>
+    <title>SEO Report Generator - ProgrammX</title>
     <style>
         * {
             margin: 0;
@@ -13,7 +13,7 @@
 
         body {
             font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
-            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            background: linear-gradient(135deg, #0a1929 0%, #1a2332 50%, #0f1419 100%);
             min-height: 100vh;
             display: flex;
             justify-content: center;
@@ -21,25 +21,139 @@
             padding: 20px;
         }
 
-        .container {
-            background: white;
+        /* Logo Prompt Modal */
+        .logo-prompt-modal {
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background: rgba(0, 0, 0, 0.85);
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            z-index: 1000;
+            backdrop-filter: blur(5px);
+        }
+
+        .logo-prompt-modal.hidden {
+            display: none;
+        }
+
+        .logo-prompt-content {
+            background: linear-gradient(135deg, #1a2332 0%, #0f1419 100%);
+            border: 2px solid #00d4ff;
             border-radius: 20px;
-            box-shadow: 0 20px 60px rgba(0, 0, 0, 0.3);
+            padding: 40px;
+            max-width: 400px;
+            width: 90%;
+            text-align: center;
+            box-shadow: 0 0 30px rgba(0, 212, 255, 0.3);
+        }
+
+        .logo-prompt-content h2 {
+            color: #00d4ff;
+            margin-bottom: 20px;
+            font-size: 24px;
+        }
+
+        .logo-prompt-content p {
+            color: #e0e0e0;
+            margin-bottom: 30px;
+            font-size: 16px;
+        }
+
+        .logo-prompt-buttons {
+            display: flex;
+            gap: 15px;
+            justify-content: center;
+        }
+
+        .logo-prompt-btn {
+            padding: 12px 30px;
+            border: 2px solid #00d4ff;
+            background: transparent;
+            color: #00d4ff;
+            border-radius: 10px;
+            cursor: pointer;
+            font-size: 16px;
+            font-weight: 600;
+            transition: all 0.3s ease;
+        }
+
+        .logo-prompt-btn:hover {
+            background: #00d4ff;
+            color: #0a1929;
+            transform: translateY(-2px);
+            box-shadow: 0 4px 15px rgba(0, 212, 255, 0.4);
+        }
+
+        .logo-prompt-btn.yes {
+            background: #00d4ff;
+            color: #0a1929;
+        }
+
+        .logo-prompt-btn.yes:hover {
+            background: #00b8e6;
+        }
+
+        /* Header with Logo */
+        .header {
+            text-align: center;
+            margin-bottom: 30px;
+        }
+
+        .header.hidden {
+            display: none;
+        }
+
+        .logo-container {
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            gap: 15px;
+            margin-bottom: 15px;
+        }
+
+        .logo-img {
+            width: 60px;
+            height: 60px;
+            object-fit: contain;
+            filter: drop-shadow(0 0 10px rgba(0, 212, 255, 0.5));
+        }
+
+        .company-name {
+            font-size: 32px;
+            font-weight: 700;
+            background: linear-gradient(135deg, #00d4ff 0%, #00a8cc 100%);
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+            background-clip: text;
+            text-shadow: 0 0 20px rgba(0, 212, 255, 0.3);
+        }
+
+        .container {
+            background: rgba(255, 255, 255, 0.05);
+            backdrop-filter: blur(10px);
+            border: 1px solid rgba(0, 212, 255, 0.2);
+            border-radius: 20px;
+            box-shadow: 0 20px 60px rgba(0, 0, 0, 0.5), 0 0 30px rgba(0, 212, 255, 0.1);
             max-width: 600px;
             width: 100%;
             padding: 40px;
         }
 
         h1 {
-            color: #333;
+            color: #00d4ff;
             margin-bottom: 10px;
             text-align: center;
             font-size: 28px;
+            text-shadow: 0 0 10px rgba(0, 212, 255, 0.3);
         }
 
         .subtitle {
             text-align: center;
-            color: #666;
+            color: #b0b0b0;
             margin-bottom: 30px;
             font-size: 14px;
         }
@@ -51,7 +165,7 @@
         .form-group label {
             display: block;
             margin-bottom: 8px;
-            color: #333;
+            color: #00d4ff;
             font-weight: 600;
             font-size: 14px;
         }
@@ -65,33 +179,34 @@
 
         .btn-option {
             padding: 14px 20px;
-            border: 2px solid #e0e0e0;
-            background: white;
+            border: 2px solid rgba(0, 212, 255, 0.3);
+            background: rgba(255, 255, 255, 0.05);
             border-radius: 10px;
             cursor: pointer;
             transition: all 0.3s ease;
             font-size: 15px;
             font-weight: 500;
-            color: #555;
+            color: #e0e0e0;
             text-align: center;
         }
 
         .btn-option:hover {
-            border-color: #667eea;
-            background: #f5f3ff;
+            border-color: #00d4ff;
+            background: rgba(0, 212, 255, 0.1);
             transform: translateY(-2px);
+            box-shadow: 0 4px 15px rgba(0, 212, 255, 0.2);
         }
 
         .btn-option.active {
-            border-color: #667eea;
-            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
-            color: white;
-            box-shadow: 0 4px 15px rgba(102, 126, 234, 0.4);
+            border-color: #00d4ff;
+            background: linear-gradient(135deg, #00d4ff 0%, #00a8cc 100%);
+            color: #0a1929;
+            box-shadow: 0 4px 15px rgba(0, 212, 255, 0.4);
         }
 
         .btn-option.active:hover {
             transform: translateY(-2px);
-            box-shadow: 0 6px 20px rgba(102, 126, 234, 0.5);
+            box-shadow: 0 6px 20px rgba(0, 212, 255, 0.5);
         }
 
         input[type="text"],
@@ -100,11 +215,13 @@
         input[type="date"] {
             width: 100%;
             padding: 12px 16px;
-            border: 2px solid #e0e0e0;
+            border: 2px solid rgba(0, 212, 255, 0.3);
+            background: rgba(255, 255, 255, 0.05);
             border-radius: 10px;
             font-size: 15px;
             transition: all 0.3s ease;
             font-family: inherit;
+            color: #e0e0e0;
         }
 
         input[type="text"]:focus,
@@ -112,8 +229,15 @@
         input[type="url"]:focus,
         input[type="date"]:focus {
             outline: none;
-            border-color: #667eea;
-            box-shadow: 0 0 0 3px rgba(102, 126, 234, 0.1);
+            border-color: #00d4ff;
+            background: rgba(255, 255, 255, 0.08);
+            box-shadow: 0 0 0 3px rgba(0, 212, 255, 0.2);
+        }
+
+        input[type="text"]::placeholder,
+        input[type="email"]::placeholder,
+        input[type="url"]::placeholder {
+            color: #888;
         }
 
         .date-group {
@@ -125,8 +249,8 @@
         .submit-btn {
             width: 100%;
             padding: 16px;
-            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
-            color: white;
+            background: linear-gradient(135deg, #00d4ff 0%, #00a8cc 100%);
+            color: #0a1929;
             border: none;
             border-radius: 10px;
             font-size: 16px;
@@ -134,12 +258,13 @@
             cursor: pointer;
             transition: all 0.3s ease;
             margin-top: 10px;
-            box-shadow: 0 4px 15px rgba(102, 126, 234, 0.4);
+            box-shadow: 0 4px 15px rgba(0, 212, 255, 0.4);
         }
 
         .submit-btn:hover {
             transform: translateY(-2px);
-            box-shadow: 0 6px 20px rgba(102, 126, 234, 0.5);
+            box-shadow: 0 6px 20px rgba(0, 212, 255, 0.5);
+            background: linear-gradient(135deg, #00e5ff 0%, #00b8e6 100%);
         }
 
         .submit-btn:active {
@@ -156,7 +281,7 @@
             display: none;
             text-align: center;
             margin-top: 20px;
-            color: #667eea;
+            color: #00d4ff;
             font-weight: 500;
         }
 
@@ -173,17 +298,6 @@
             font-size: 14px;
         }
 
-        .success-message {
-            background: #d4edda;
-            color: #155724;
-            border: 1px solid #c3e6cb;
-        }
-
-        .error-message {
-            background: #f8d7da;
-            color: #721c24;
-            border: 1px solid #f5c6cb;
-        }
 
         .success-message.show,
         .error-message.show {
@@ -195,8 +309,8 @@
         }
 
         .spinner {
-            border: 3px solid #f3f3f3;
-            border-top: 3px solid #667eea;
+            border: 3px solid rgba(0, 212, 255, 0.2);
+            border-top: 3px solid #00d4ff;
             border-radius: 50%;
             width: 20px;
             height: 20px;
@@ -216,10 +330,44 @@
             color: #888;
             margin-top: 5px;
         }
+
+        .success-message {
+            background: rgba(76, 175, 80, 0.2);
+            color: #81c784;
+            border: 1px solid rgba(76, 175, 80, 0.4);
+        }
+
+        .error-message {
+            background: rgba(244, 67, 54, 0.2);
+            color: #e57373;
+            border: 1px solid rgba(244, 67, 54, 0.4);
+        }
     </style>
 </head>
 <body>
+    <!-- Logo Prompt Modal -->
+    <div class="logo-prompt-modal" id="logoPromptModal">
+        <div class="logo-prompt-content">
+            <h2>Welcome to SEO Report Generator</h2>
+            <p>Would you like to see the ProgrammX logo on this page?</p>
+            <div class="logo-prompt-buttons">
+                <button class="logo-prompt-btn yes" onclick="setLogoPreference(true)">Yes, Show Logo</button>
+                <button class="logo-prompt-btn" onclick="setLogoPreference(false)">No, Skip</button>
+            </div>
+        </div>
+    </div>
+
     <div class="container">
+        <!-- Header with Logo (Conditional) -->
+        <div class="header" id="headerWithLogo">
+            <div class="logo-container">
+                <img src="https://programmx.com/_next/image?url=%2F_next%2Fstatic%2Fmedia%2Flogo.ca739ca7.png&w=640&q=75" 
+                     alt="ProgrammX Logo" 
+                     class="logo-img">
+                <div class="company-name">ProgrammX</div>
+            </div>
+        </div>
+
         <h1>🚀 SEO Report Generator</h1>
         <p class="subtitle">Generate Onboarding or Progress Reports for Your Website</p>
 
@@ -311,6 +459,30 @@
     </div>
 
     <script>
+        // Logo preference management (no saving)
+        function setLogoPreference(show) {
+            const header = document.getElementById('headerWithLogo');
+            const modal = document.getElementById('logoPromptModal');
+            
+            if (show) {
+                header.classList.remove('hidden');
+            } else {
+                header.classList.add('hidden');
+            }
+            
+            modal.classList.add('hidden');
+        }
+
+        // Initialize logo display on page load - always show prompt
+        window.addEventListener('DOMContentLoaded', function() {
+            const modal = document.getElementById('logoPromptModal');
+            const header = document.getElementById('headerWithLogo');
+            
+            // Always show prompt on page load
+            modal.classList.remove('hidden');
+            header.classList.add('hidden');
+        });
+
         // State management
         let selectedReportType = null;
         let selectedAudience = null;
