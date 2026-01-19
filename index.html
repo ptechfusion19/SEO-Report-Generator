@@ -21,90 +21,10 @@
             padding: 20px;
         }
 
-        /* Logo Prompt Modal */
-        .logo-prompt-modal {
-            position: fixed;
-            top: 0;
-            left: 0;
-            width: 100%;
-            height: 100%;
-            background: rgba(0, 0, 0, 0.85);
-            display: flex;
-            justify-content: center;
-            align-items: center;
-            z-index: 1000;
-            backdrop-filter: blur(5px);
-        }
-
-        .logo-prompt-modal.hidden {
-            display: none;
-        }
-
-        .logo-prompt-content {
-            background: linear-gradient(135deg, #1a2332 0%, #0f1419 100%);
-            border: 2px solid #00d4ff;
-            border-radius: 20px;
-            padding: 40px;
-            max-width: 400px;
-            width: 90%;
-            text-align: center;
-            box-shadow: 0 0 30px rgba(0, 212, 255, 0.3);
-        }
-
-        .logo-prompt-content h2 {
-            color: #00d4ff;
-            margin-bottom: 20px;
-            font-size: 24px;
-        }
-
-        .logo-prompt-content p {
-            color: #e0e0e0;
-            margin-bottom: 30px;
-            font-size: 16px;
-        }
-
-        .logo-prompt-buttons {
-            display: flex;
-            gap: 15px;
-            justify-content: center;
-        }
-
-        .logo-prompt-btn {
-            padding: 12px 30px;
-            border: 2px solid #00d4ff;
-            background: transparent;
-            color: #00d4ff;
-            border-radius: 10px;
-            cursor: pointer;
-            font-size: 16px;
-            font-weight: 600;
-            transition: all 0.3s ease;
-        }
-
-        .logo-prompt-btn:hover {
-            background: #00d4ff;
-            color: #0a1929;
-            transform: translateY(-2px);
-            box-shadow: 0 4px 15px rgba(0, 212, 255, 0.4);
-        }
-
-        .logo-prompt-btn.yes {
-            background: #00d4ff;
-            color: #0a1929;
-        }
-
-        .logo-prompt-btn.yes:hover {
-            background: #00b8e6;
-        }
-
         /* Header with Logo */
         .header {
             text-align: center;
             margin-bottom: 30px;
-        }
-
-        .header.hidden {
-            display: none;
         }
 
         .logo-container {
@@ -345,21 +265,9 @@
     </style>
 </head>
 <body>
-    <!-- Logo Prompt Modal -->
-    <div class="logo-prompt-modal" id="logoPromptModal">
-        <div class="logo-prompt-content">
-            <h2>Welcome to SEO Report Generator</h2>
-            <p>Would you like to see the ProgrammX logo on this page?</p>
-            <div class="logo-prompt-buttons">
-                <button class="logo-prompt-btn yes" onclick="setLogoPreference(true)">Yes, Show Logo</button>
-                <button class="logo-prompt-btn" onclick="setLogoPreference(false)">No, Skip</button>
-            </div>
-        </div>
-    </div>
-
     <div class="container">
-        <!-- Header with Logo (Conditional) -->
-        <div class="header" id="headerWithLogo">
+        <!-- Header with Logo -->
+        <div class="header">
             <div class="logo-container">
                 <img src="https://media.licdn.com/dms/image/v2/D4D0BAQFdJWk29TWi5w/company-logo_200_200/company-logo_200_200/0/1732531337286/programm_x_logo?e=2147483647&v=beta&t=8-SdZwxwzOq-_NdDj7_1qNinTam4kB-wFb5I8_a0Pc4" 
                      alt="ProgrammX Logo" 
@@ -459,30 +367,6 @@
     </div>
 
     <script>
-        // Logo preference management (no saving)
-        function setLogoPreference(show) {
-            const header = document.getElementById('headerWithLogo');
-            const modal = document.getElementById('logoPromptModal');
-            
-            if (show) {
-                header.classList.remove('hidden');
-            } else {
-                header.classList.add('hidden');
-            }
-            
-            modal.classList.add('hidden');
-        }
-
-        // Initialize logo display on page load - always show prompt
-        window.addEventListener('DOMContentLoaded', function() {
-            const modal = document.getElementById('logoPromptModal');
-            const header = document.getElementById('headerWithLogo');
-            
-            // Always show prompt on page load
-            modal.classList.remove('hidden');
-            header.classList.add('hidden');
-        });
-
         // State management
         let selectedReportType = null;
         let selectedAudience = null;
