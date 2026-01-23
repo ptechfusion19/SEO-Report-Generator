@@ -440,7 +440,7 @@
       "type": "n8n-nodes-base.httpRequest",
       "typeVersion": 4.3,
       "position": [
-        1200,
+        1152,
         736
       ],
       "id": "d8dc0caa-279a-4fd6-b85a-232668c8e2a9",
@@ -460,7 +460,7 @@
       "type": "n8n-nodes-base.code",
       "typeVersion": 2,
       "position": [
-        1376,
+        1360,
         736
       ],
       "id": "dee59dc8-d309-4a0e-8c55-8fd25035d152",
@@ -942,6 +942,183 @@
       ],
       "id": "9e5bb221-013c-453b-9259-cea53682b7e7",
       "name": "Sticky Note1"
+    },
+    {
+      "parameters": {
+        "conditions": {
+          "options": {
+            "caseSensitive": true,
+            "leftValue": "",
+            "typeValidation": "strict",
+            "version": 3
+          },
+          "conditions": [
+            {
+              "id": "5cfc233a-788c-40d7-b7d1-c325f63b4665",
+              "leftValue": "=={{ $json.files && $json.files.length > 0 && $json.files.some(file => {\n  const fileName = file.name || '';\n  const targetUrl = $('Aggregate Data1').first().json.metadata?.targetUrl || '';\n  const dateFrom = $('Aggregate Data1').first().json.metadata?.dateFrom || '';\n  const dateTo = $('Aggregate Data1').first().json.metadata?.dateTo || '';\n  \n  // Clean URL to match filename pattern (remove https://, www., replace dots with underscores)\n  const cleanUrl = targetUrl\n    .replace(/^https?:\\/\\//, '')\n    .replace(/^www\\./, '')\n    .replace(/\\./g, '_')\n    .replace(/[^a-zA-Z0-9_]/g, '');\n  \n  // Build expected filename pattern\n  const expectedPattern = `SEO_Performance_Report_${cleanUrl}`;\n  \n  // Check if filename starts with pattern and contains date range\n  return fileName.includes(expectedPattern) && \n         (dateFrom ? fileName.includes(dateFrom) : true) &&\n         (dateTo ? fileName.includes(dateTo) : true);\n}) }}",
+              "rightValue": "",
+              "operator": {
+                "type": "string",
+                "operation": "empty",
+                "singleValue": true
+              }
+            }
+          ],
+          "combinator": "and"
+        },
+        "options": {}
+      },
+      "type": "n8n-nodes-base.if",
+      "typeVersion": 2.3,
+      "position": [
+        1312,
+        288
+      ],
+      "id": "d6e41620-2720-41b3-bcd1-8132a02b1708",
+      "name": "If"
+    },
+    {
+      "parameters": {
+        "jsCode": "// Prepare data structure without previous report\nconst aggregatedData = $('Aggregate Data1').first().json;\n\nreturn {\n  json: {\n    ...aggregatedData,\n    previousReport: {\n      hasPreviousReport: false,\n      reportName: null,\n      reportDate: null,\n      content: null\n    }\n  }\n};"
+      },
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        1536,
+        304
+      ],
+      "id": "a886fb40-1ab1-40ce-9497-2542d3619b3e",
+      "name": "Prepare Data Without Previous Report"
+    },
+    {
+      "parameters": {
+        "promptType": "define",
+        "text": "={{ $json.userPrompt }}",
+        "messages": {
+          "messageValues": [
+            {
+              "message": "={{ $json.systemPrompt }}"
+            }
+          ]
+        },
+        "batching": {}
+      },
+      "type": "@n8n/n8n-nodes-langchain.chainLlm",
+      "typeVersion": 1.7,
+      "position": [
+        1904,
+        304
+      ],
+      "id": "3fec2fae-6614-4d27-9fa3-a1beda73d351",
+      "name": "Performance Report Generator1",
+      "retryOnFail": true
+    },
+    {
+      "parameters": {
+        "model": {
+          "__rl": true,
+          "mode": "list",
+          "value": "gpt-4.1-mini"
+        },
+        "builtInTools": {},
+        "options": {}
+      },
+      "type": "@n8n/n8n-nodes-langchain.lmChatOpenAi",
+      "typeVersion": 1.3,
+      "position": [
+        1904,
+        512
+      ],
+      "id": "39a68c21-51e2-4240-80d7-703f4261a4ce",
+      "name": "OpenAI Chat Model",
+      "credentials": {
+        "openAiApi": {
+          "id": "H5LXr3raFFEHNnlb",
+          "name": "OpenAi account 3"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "jsCode": "// Convert LLM output to Markdown file\nconst markdown = $input.first().json.text;\nconst website = $('Generate Prompt2').first().json.targetWebsite || 'website';\nconst validateInput = $('Validate Input1').first().json;\nconst dateFrom = validateInput.date_from || '';\nconst dateTo = validateInput.date_to || '';\nconst date = new Date().toISOString().split('T')[0];\n\n// Create filename with SEO_Performance_Report pattern\nconst cleanWebsite = website.replace(/[^a-zA-Z0-9]/g, '_').replace(/_+/g, '_');\nconst dateRange = dateFrom && dateTo ? `_${dateFrom}_to_${dateTo}` : '';\nconst filename = `SEO_Performance_Report_${cleanWebsite}${dateRange}_${date}.md`;\n\n// Convert markdown text to base64 for binary\nconst base64Content = Buffer.from(markdown, 'utf8').toString('base64');\n\nreturn {\n  json: {\n    filename: filename,\n    targetWebsite: website,\n    generatedAt: date,\n    dateFrom: dateFrom,\n    dateTo: dateTo,\n    markdownContent: markdown\n  },\n  binary: {\n    data: {\n      data: base64Content,\n      mimeType: 'text/markdown',\n      fileName: filename,\n      fileExtension: 'md'\n    }\n  }\n};"
+      },
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        2192,
+        304
+      ],
+      "id": "2d3e4c42-9088-49a7-9df2-3f02ea2203d3",
+      "name": "Convert To Markdown2"
+    },
+    {
+      "parameters": {
+        "name": "={{ $json.filename }}",
+        "driveId": {
+          "__rl": true,
+          "value": "My Drive",
+          "mode": "list",
+          "cachedResultName": "My Drive",
+          "cachedResultUrl": "https://drive.google.com/drive/my-drive"
+        },
+        "folderId": {
+          "__rl": true,
+          "value": "1CwmxaJ5LEvokptosoiNx1rHXC-wL110-",
+          "mode": "id"
+        },
+        "options": {}
+      },
+      "type": "n8n-nodes-base.googleDrive",
+      "typeVersion": 3,
+      "position": [
+        2400,
+        304
+      ],
+      "id": "b592f706-390d-461e-bdf2-8aa50c093d5f",
+      "name": "Google Drive2",
+      "credentials": {
+        "googleDriveOAuth2Api": {
+          "id": "eBh6pygRVxYps7mk",
+          "name": "Google Drive account 4"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "fromEmail": "automation@programmx.com",
+        "toEmail": "={{ $(\"Validate Input1\").first().json.email }}",
+        "subject": "=SEO Performance Report - {{ $('Convert To Markdown2').first().json.targetWebsite }} ({{ $('Convert To Markdown2').first().json.dateFrom }} to {{ $('Convert To Markdown2').first().json.dateTo }})",
+        "html": "=<!DOCTYPE html>\n<html>\n<head>\n  <style>\n    body { font-family: Arial, sans-serif; line-height: 1.6; color: #333; }\n    .container { max-width: 600px; margin: 0 auto; padding: 20px; }\n    .header { background: linear-gradient(135deg, #1a365d 0%, #2c5282 100%); color: white; padding: 30px; border-radius: 10px 10px 0 0; text-align: center; }\n    .content { background: #f8f9fa; padding: 30px; border-radius: 0 0 10px 10px; }\n    .button { display: inline-block; background: #2b6cb0; color: white; padding: 15px 30px; text-decoration: none; border-radius: 5px; font-weight: bold; margin: 20px 0; }\n    .footer { text-align: center; margin-top: 20px; color: #718096; font-size: 12px; }\n    .highlight { background: #ebf8ff; padding: 15px; border-radius: 5px; border-left: 4px solid #2b6cb0; margin: 15px 0; }\n  </style>\n</head>\n<body>\n  <div class=\"container\">\n    <div class=\"header\">\n      <h1>📊 SEO Performance Report Ready!</h1>\n    </div>\n    <div class=\"content\">\n      <p>Hello,</p>\n      \n      <p>Your comprehensive SEO Performance Report has been generated and saved.</p>\n      \n      <div class=\"highlight\">\n        <h3 style=\"margin-top: 0;\">📋 Report Details:</h3>\n        <ul style=\"margin-bottom: 0;\">\n          <li><strong>Website:</strong> {{ $('Convert To Markdown2').first().json.targetWebsite }}</li>\n          <li><strong>Period:</strong> {{ $('Convert To Markdown2').first().json.dateFrom }} to {{ $('Convert To Markdown2').first().json.dateTo }}</li>\n          <li><strong>Generated:</strong> {{ $now.format('d MMMM yyyy') }}</li>\n          <li><strong>File:</strong> {{ $('Convert To Markdown2').first().json.filename }}</li>\n        </ul>\n      </div>\n      \n      <p style=\"text-align: center;\">\n        <a href=\"https://drive.google.com/file/d/{{ $('Google Drive2').first().json.id }}/view\" class=\"button\">\n          📄 View Report in Google Drive\n        </a>\n      </p>\n      \n      <h3>📈 What's Included:</h3>\n      <ul>\n        <li>Executive Summary & Overall Status</li>\n        <li>Domain & Traffic Overview with Trends</li>\n        <li>Organic Keyword Performance Analysis</li>\n        <li>Technical SEO Health Assessment</li>\n        <li>Backlink Profile Analysis</li>\n        <li>Summary of Period Gains</li>\n        <li>Strategic Recommendations</li>\n      </ul>\n      \n      <p>This report covers the period from <strong>{{ $('Convert To Markdown2').first().json.dateFrom }}</strong> to <strong>{{ $('Convert To Markdown2').first().json.dateTo }}</strong>.</p>\n    </div>\n    <div class=\"footer\">\n      <p>This report was automatically generated by our SEO monitoring system.</p>\n    </div>\n  </div>\n</body>\n</html>",
+        "options": {}
+      },
+      "type": "n8n-nodes-base.emailSend",
+      "typeVersion": 2.1,
+      "position": [
+        2640,
+        304
+      ],
+      "id": "2a543d13-9c5c-4ff7-9cd1-5b1035219054",
+      "name": "Send Report2",
+      "webhookId": "8cc4bd9c-86ee-4316-9d5d-009ddd4195b4",
+      "credentials": {
+        "smtp": {
+          "id": "Powsux0m0r1TlNbw",
+          "name": "SMTP account 2"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "jsCode": "// Build AI Prompt - SEO Performance Report with Audience-Specific Focus\nconst data = $input.first().json;\n\n// Extract data\nconst domainRank = data.domainRank?.domainRank || {};\nconst keywords = data.keywords?.keywords || {};\nconst backlinks = data.backlinks?.backlinks || {};\nconst onPage = data.onPage?.onPage || {};\nconst metadata = data.metadata || {};\n\n// Previous Report Data\nconst previousReport = data.previousReport || {};\nconst hasPreviousReport = previousReport.hasPreviousReport || false;\nconst previousReportContent = previousReport.content || null;\nconst previousReportName = previousReport.reportName || null;\nconst previousReportDate = previousReport.reportDate || null;\n\n// NEW: Get report audience type\nconst reportAudience = metadata.reportAudience || 'client';\nconst isClientReport = reportAudience === 'client';\nconst isInternalReport = reportAudience === 'internal';\n\n// Get date range from metadata\nconst dateFrom = metadata.dateFrom || 'N/A';\nconst dateTo = metadata.dateTo || 'N/A';\n\n// Format date range for display\nconst formatDate = (dateStr) => {\n  if (!dateStr || dateStr === 'N/A') return 'N/A';\n  const date = new Date(dateStr);\n  const options = { day: 'numeric', month: 'long', year: 'numeric' };\n  return date.toLocaleDateString('en-GB', options);\n};\n\nconst formattedDateFrom = formatDate(dateFrom);\nconst formattedDateTo = formatDate(dateTo);\nconst reportPeriod = `${formattedDateFrom} - ${formattedDateTo}`;\n\n// Format keywords lists\nconst formatKeywords = (kwList, limit = 10) => {\n  if (!kwList || kwList.length === 0) return '*No keywords in this category*';\n  return kwList.slice(0, limit).map((kw, i) => \n    `${i + 1}. **${kw.keyword}** (Rank: ${kw.rank}, Volume: ${kw.searchVolume}/mo, CPC: £${kw.cpc})`\n  ).join('\\n');\n};\n\n// Calculate trends (same as before)\nconst trafficChange = domainRank.periodChanges?.trafficValueChange || 0;\nconst trafficStart = domainRank.periodChanges?.trafficStart || 0;\nconst trafficTrend = trafficStart > 0 ? Math.round((trafficChange / trafficStart) * 100) : 0;\nconst trafficTrendStr = trafficTrend >= 0 ? `+${trafficTrend}%` : `${trafficTrend}%`;\n\nconst keywordChange = domainRank.periodChanges?.keywordsChange || 0;\nconst keywordStart = domainRank.periodChanges?.keywordsStart || 0;\nconst keywordTrend = keywordStart > 0 ? Math.round((keywordChange / keywordStart) * 100) : 0;\nconst keywordTrendStr = keywordTrend >= 0 ? `+${keywordTrend}%` : `${keywordTrend}%`;\n\nconst backlinksChange = backlinks.periodChanges?.backlinksChange || 0;\nconst backlinksStart = backlinks.periodChanges?.backlinksStart || 0;\nconst backlinksTrend = backlinksStart > 0 ? Math.round((backlinksChange / backlinksStart) * 100) : 0;\nconst backlinksTrendStr = backlinksTrend >= 0 ? `+${backlinksTrend}%` : `${backlinksTrend}%`;\n\nconst domainsChange = backlinks.periodChanges?.domainsChange || 0;\nconst domainsStart = backlinks.periodChanges?.domainsStart || 0;\nconst domainsTrend = domainsStart > 0 ? Math.round((domainsChange / domainsStart) * 100) : 0;\nconst domainsTrendStr = domainsTrend >= 0 ? `+${domainsTrend}%` : `${domainsTrend}%`;\n\n// Health score\nconst criticalIssues = onPage.issues?.critical || 0;\nconst warnings = onPage.issues?.warnings || 0;\nconst healthScore = Math.max(0, 100 - (criticalIssues * 5) - (warnings * 2));\n\n// Intent distribution\nconst allKeywords = keywords.allKeywords || [];\nconst totalKw = allKeywords.length || 1;\nconst informationalKw = allKeywords.filter(k => k.intent === 'informational').length;\nconst commercialKw = allKeywords.filter(k => k.intent === 'commercial').length;\nconst navigationalKw = allKeywords.filter(k => k.intent === 'navigational').length;\nconst transactionalKw = allKeywords.filter(k => k.intent === 'transactional').length;\n\nconst informationalPercent = Math.round((informationalKw / totalKw) * 100) || 0;\nconst commercialPercent = Math.round((commercialKw / totalKw) * 100) || 0;\nconst navigationalPercent = Math.round((navigationalKw / totalKw) * 100) || 0;\nconst transactionalPercent = Math.round((transactionalKw / totalKw) * 100) || 0;\n\n// ========== AUDIENCE-SPECIFIC INSTRUCTIONS ==========\nlet audienceInstructions = '';\nlet toneGuidelines = '';\nlet focusAreas = '';\n\nif (isClientReport) {\n  audienceInstructions = `\n## 🎯 REPORT AUDIENCE: CLIENT-FACING\n\nThis report is for the CLIENT. Follow these guidelines:`;\n\n  toneGuidelines = `\n### Tone & Style:\n- Professional, positive, and encouraging\n- Focus on achievements and progress\n- Use confident, reassuring language\n- Celebrate wins and improvements\n- Frame challenges as \"opportunities for growth\"`;\n\n  focusAreas = `\n### Content Focus (CLIENT):\n- **EMPHASISE:** Gains, improvements, positive trends, achievements\n- **HIGHLIGHT:** Traffic growth, new keywords, ranking improvements\n- **DOWNPLAY:** Losses (mention briefly, don't dwell)\n- **FRAME ISSUES AS:** \"Areas for optimisation\" or \"Opportunities\"\n- **RECOMMENDATIONS:** Focus on growth opportunities, not problems\n- **OVERALL TONE:** Optimistic progress report showing value delivered\n\n### What to Avoid (CLIENT):\n- Don't use alarming language about losses\n- Don't list every single issue or error\n- Don't be overly technical\n- Don't focus on negatives without solutions`;\n\n} else {\n  audienceInstructions = `\n## 🔍 REPORT AUDIENCE: INTERNAL TEAM\n\nThis report is for INTERNAL use. Follow these guidelines:`;\n\n  toneGuidelines = `\n### Tone & Style:\n- Honest, analytical, and direct\n- No sugar-coating - show the real picture\n- Technical and detailed where needed\n- Critical assessment of performance\n- Identify problems clearly`;\n\n  focusAreas = `\n### Content Focus (INTERNAL):\n- **ANALYSE HONESTLY:** Both gains AND losses in equal detail\n- **HIGHLIGHT PROBLEMS:** Technical issues, ranking drops, lost keywords\n- **DEEP DIVE:** Why things declined, what caused issues\n- **TECHNICAL DETAILS:** Error codes, specific pages affected, crawl issues\n- **RECOMMENDATIONS:** Prioritised action items with urgency levels\n- **OVERALL TONE:** Honest assessment for team action\n\n### Additional Internal Sections:\n- List ALL critical technical issues with details\n- Show keyword losses and why they might have occurred\n- Identify content gaps and weaknesses\n- Competitor implications (if visible from data)\n- Resource requirements for fixes\n- Priority ranking of issues (Critical/High/Medium/Low)`;\n}\n\n// Previous report section\nlet previousReportSection = '';\nif (hasPreviousReport && previousReportContent) {\n  previousReportSection = `\n---\n\n## 📊 PREVIOUS REPORT FOR COMPARISON\n\n**Previous Report:** ${previousReportName || 'Previous SEO Report'}\n**Report Date:** ${formatDate(previousReportDate)}\n\n### PREVIOUS REPORT CONTENT:\n\\`\\`\\`\n${previousReportContent}\n\\`\\`\\`\n\n---\n`;\n}\n\n// ========== BUILD SYSTEM PROMPT ==========\nconst systemPrompt = `You are a Senior UK SEO Analyst creating a ${isClientReport ? 'CLIENT-FACING' : 'INTERNAL TEAM'} performance report.\n\nYour expertise includes:\n- Performance tracking and trend analysis\n- Technical SEO health monitoring\n- Keyword ranking analysis\n- Backlink profile assessment\n- Strategic recommendations\n${hasPreviousReport ? '- Period-over-period comparison' : ''}\n\n${isClientReport ? `\nCLIENT REPORT GUIDELINES:\n- Be positive and focus on achievements\n- Highlight progress and wins\n- Frame challenges as opportunities\n- Use encouraging, professional language\n- Show value delivered to the client\n- Keep technical jargon minimal\n` : `\nINTERNAL REPORT GUIDELINES:\n- Be brutally honest about performance\n- Highlight ALL issues, losses, and problems\n- Provide detailed technical analysis\n- Include actionable items with priorities\n- Don't hide bad news - the team needs to know\n- Be specific about what needs fixing and why\n`}\n\nReport Format Requirements:\n- Use UK English spelling (optimisation, analyse, colour, etc.)\n- Use clean, scannable tables for metrics\n- Use clear section headings with numbers\n- Include trend indicators (↑ ↓ →)\n- Use **bold** for key metrics\n- Use £ for currency values`;\n\n// ========== BUILD USER PROMPT ==========\nconst userPrompt = `# SEO ${isClientReport ? 'Performance' : 'Analysis'} Report: ${domainRank.target || 'Unknown Website'}\n\n**Reporting Period:** ${reportPeriod}\n**Report Type:** ${isClientReport ? '📊 Client Report' : '🔍 Internal Analysis'}\n${hasPreviousReport ? `**Includes:** Comparison with previous report` : ''}\n${audienceInstructions}\n${toneGuidelines}\n${focusAreas}\n${previousReportSection}\n---\n\n## RAW DATA FOR ANALYSIS\n\n### Authority & Traffic Data\n- Target Domain: ${domainRank.target || 'N/A'}\n- Estimated Traffic Value: £${domainRank.estimatedTrafficValue || 0}\n- Total Ranking Keywords: ${domainRank.totalKeywords || 0}\n- Keywords Start of Period: ${domainRank.periodChanges?.keywordsStart || 0}\n- Keywords End of Period: ${domainRank.periodChanges?.keywordsEnd || 0}\n- Traffic Value Start: £${domainRank.periodChanges?.trafficStart || 0}\n- Traffic Value End: £${domainRank.periodChanges?.trafficEnd || 0}\n\n### Position Distribution\n- Top 3 Positions: ${domainRank.positions?.top3 || 0}\n- Top 10 Positions: ${domainRank.positions?.top10 || 0}\n- Page 2 (11-20): ${domainRank.positions?.page2 || 0}\n- Page 3 (21-30): ${domainRank.positions?.page3 || 0}\n- Page 4+ (31+): ${domainRank.positions?.page4Plus || 0}\n\n### Keyword Movement (During Period)\n- New Keywords: +${domainRank.movement?.newKeywords || 0}\n- Improved Positions: +${domainRank.movement?.improved || 0}\n- Declined Positions: -${domainRank.movement?.declined || 0}\n- Lost Keywords: -${domainRank.movement?.lost || 0}\n\n### Keyword Analysis\n- Total Keywords: ${keywords.summary?.totalKeywords || 0}\n- Total Search Volume: ${keywords.summary?.totalSearchVolume || 0}/month\n- Branded: ${keywords.summary?.brandedCount || 0} (${keywords.summary?.brandedPercent || 0}%)\n- Unbranded: ${keywords.summary?.unbrandedCount || 0} (${keywords.summary?.unbrandedPercent || 0}%)\n\n### Search Intent Distribution\n- Informational: ${informationalKw} (${informationalPercent}%)\n- Commercial: ${commercialKw} (${commercialPercent}%)\n- Navigational: ${navigationalKw} (${navigationalPercent}%)\n- Transactional: ${transactionalKw} (${transactionalPercent}%)\n\n### Top Performing Keywords\n${formatKeywords(keywords.topPerformers, 10)}\n\n### Page 2 Opportunities\n${formatKeywords(keywords.quickWinOpportunities, 10)}\n\n### Backlink Profile\n- Total Backlinks: ${backlinks.totalBacklinks || 0}\n- Referring Domains: ${backlinks.referringDomains || 0}\n- Domain Rank: ${backlinks.rank || 0}\n- Backlinks Change: ${backlinksChange} (${backlinksTrendStr})\n- Domains Change: ${domainsChange} (${domainsTrendStr})\n\n### Technical SEO (OnPage)\n- Site Health Score: ${healthScore}%\n- Pages Crawled: ${onPage.pagesCrawled || 0}\n- Critical Issues: ${onPage.issues?.critical || 0}\n- Warnings: ${onPage.issues?.warnings || 0}\n- Notices: ${onPage.issues?.notices || 0}\n- Broken Links: ${onPage.pageMetrics?.brokenLinks || 0}\n- Broken Resources: ${onPage.pageMetrics?.brokenResources || 0}\n- Duplicate Titles: ${onPage.pageMetrics?.duplicateTitle || 0}\n- Duplicate Descriptions: ${onPage.pageMetrics?.duplicateDescription || 0}\n\n### Calculated Trends\n- Traffic Trend: ${trafficTrendStr}\n- Keyword Trend: ${keywordTrendStr}\n- Backlinks Trend: ${backlinksTrendStr}\n- Domains Trend: ${domainsTrendStr}\n\n---\n\n## REQUIRED REPORT STRUCTURE\n\n${isClientReport ? `\n### CLIENT REPORT STRUCTURE:\n\n1. **Executive Summary** - Positive overview, highlight wins\n2. **Domain & Traffic Overview** - Focus on growth metrics\n3. **Keyword Performance Highlights** - Top rankings, new wins\n4. **Technical Health Summary** - Brief, non-alarming\n5. **Backlink Profile** - Growth focus\n6. **Period Achievements** - Celebrate the wins! 🎉\n7. **Growth Opportunities** - Frame as exciting next steps\n${hasPreviousReport ? `8. **Progress Since Last Report** - Show improvement\n9. **Next Steps** - Positive forward-looking recommendations` : `8. **Recommended Next Steps** - Growth-focused actions`}\n` : `\n### INTERNAL REPORT STRUCTURE:\n\n1. **Executive Summary** - Honest overall assessment\n2. **Domain & Traffic Analysis** - Full picture, gains AND losses\n3. **Keyword Performance Deep Dive** - Wins, losses, why\n4. **Technical Issues & Errors** - FULL LIST with priorities\n5. **Backlink Analysis** - Quality assessment, concerns\n6. **Problem Areas** - What's not working and why\n7. **Competitor Implications** - If visible from data\n${hasPreviousReport ? `8. **Comparison vs Previous Report** - Honest progress check\n9. **Action Items** - Prioritised with urgency levels (Critical/High/Medium/Low)` : `8. **Prioritised Action Items** - With urgency levels`}\n10. **Resource Requirements** - What's needed to fix issues\n`}\n\n---\n\n## FORMATTING RULES:\n1. UK English spelling\n2. Use tables where appropriate\n3. **Bold** key metrics\n4. Trend indicators: ↑ ↓ →\n5. Be specific with numbers\n${isClientReport ? `6. Keep tone positive and encouraging\n7. Frame negatives as opportunities\n8. Celebrate achievements` : `6. Be direct and honest\n7. Don't hide bad news\n8. Include ALL technical issues`}\n\nGenerate the complete ${isClientReport ? 'client' : 'internal'} SEO report now.`;\n\nreturn {\n  systemPrompt: systemPrompt,\n  userPrompt: userPrompt,\n  targetWebsite: domainRank.target || 'Unknown',\n  dateFrom: dateFrom,\n  dateTo: dateTo,\n  reportPeriod: reportPeriod,\n  reportAudience: reportAudience,\n  hasPreviousReport: hasPreviousReport,\n  generatedAt: new Date().toISOString()\n};"
+      },
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        1712,
+        304
+      ],
+      "id": "69128cf2-2898-4010-ade9-5be192b17247",
+      "name": "Generate Prompt2"
     }
   ],
   "pinData": {},
@@ -1196,7 +1373,7 @@
       "main": [
         [
           {
-            "node": "Get Previous Report",
+            "node": "If",
             "type": "main",
             "index": 0
           }
@@ -1481,14 +1658,99 @@
           }
         ]
       ]
+    },
+    "If": {
+      "main": [
+        [
+          {
+            "node": "Get Previous Report",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "Prepare Data Without Previous Report",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Prepare Data Without Previous Report": {
+      "main": [
+        [
+          {
+            "node": "Generate Prompt2",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "OpenAI Chat Model": {
+      "ai_languageModel": [
+        [
+          {
+            "node": "Performance Report Generator1",
+            "type": "ai_languageModel",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Performance Report Generator1": {
+      "main": [
+        [
+          {
+            "node": "Convert To Markdown2",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Convert To Markdown2": {
+      "main": [
+        [
+          {
+            "node": "Google Drive2",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Google Drive2": {
+      "main": [
+        [
+          {
+            "node": "Send Report2",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Generate Prompt2": {
+      "main": [
+        [
+          {
+            "node": "Performance Report Generator1",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
     }
   },
   "active": true,
   "settings": {
     "executionOrder": "v1"
   },
-  "versionId": "1233580d-800c-4c29-a7ca-70657264aa89",
+  "versionId": "8688ab32-6aee-42e3-b1db-16745541072b",
   "meta": {
+    "templateCredsSetupCompleted": true,
     "instanceId": "151305d708accaf9ba7df3ae300984e7c14a108b131ed2d081a3bd48f670f5c4"
   },
   "id": "GNuxYtibevwftx8Y",
