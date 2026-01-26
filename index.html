@@ -475,12 +475,31 @@
             }
         }
 
-        // URL Validation Function - Balanced: Checks accessibility but is lenient
+        // URL Validation Function - Improved: Uses multiple methods in parallel
         async function validateUrlAccessibility(url) {
             const urlInput = document.getElementById('targetUrl');
             const validationDiv = document.getElementById('urlValidation');
             const validationText = validationDiv.querySelector('.url-validation-text');
             const validationIcon = validationDiv.querySelector('.url-validation-icon');
+
+            // Helper functions for UI updates
+            function showValid(message) {
+                validationDiv.classList.remove('checking');
+                validationDiv.classList.add('valid');
+                urlInput.classList.remove('validating');
+                urlInput.classList.add('valid');
+                validationIcon.innerHTML = '✅';
+                validationText.textContent = message;
+            }
+
+            function showInvalid(message) {
+                validationDiv.classList.remove('checking');
+                validationDiv.classList.add('invalid');
+                urlInput.classList.remove('validating');
+                urlInput.classList.add('invalid');
+                validationIcon.innerHTML = '❌';
+                validationText.textContent = message;
+            }
 
             // Show validation in progress
             validationDiv.classList.remove('hidden', 'valid', 'invalid');
@@ -488,17 +507,12 @@
             urlInput.classList.remove('validating', 'valid', 'invalid');
             urlInput.classList.add('validating');
             validationIcon.innerHTML = '<div class="spinner" style="width:14px;height:14px;border-width:2px;"></div>';
-            validationText.textContent = 'Checking if URL is accessible...';
+            validationText.textContent = 'Validating URL...';
 
-            // Normalize URL
+            // Step 1: Normalize and validate URL format
             let testUrl = url.trim();
             if (!testUrl) {
-                validationDiv.classList.remove('checking');
-                validationDiv.classList.add('invalid');
-                urlInput.classList.remove('validating');
-                urlInput.classList.add('invalid');
-                validationIcon.innerHTML = '❌';
-                validationText.textContent = 'Please enter a URL';
+                showInvalid('Please enter a URL');
                 return false;
             }
 
@@ -507,180 +521,176 @@
                 testUrl = 'https://' + testUrl;
             }
 
-            // First, validate URL format
+            // Validate URL format
             try {
                 new URL(testUrl);
             } catch (e) {
-                validationDiv.classList.remove('checking');
-                validationDiv.classList.add('invalid');
-                urlInput.classList.remove('validating');
-                urlInput.classList.add('invalid');
-                validationIcon.innerHTML = '❌';
-                validationText.textContent = 'Invalid URL format';
+                showInvalid('Invalid URL format');
                 return false;
             }
 
+            // Step 2: Try multiple validation methods in parallel
+            const results = await Promise.allSettled([
+                checkWithProxy(testUrl),
+                checkWithIframe(testUrl),
+                checkWithFetch(testUrl)
+            ]);
+
+            // Analyze results
+            let successCount = 0;
+            let errorCount = 0;
             let hasClearError = false;
-            let hasSuccess = false;
 
-            // Method 1: Use CORS proxy to check if URL loads
-            const proxyServices = [
-                `https://api.allorigins.win/get?url=${encodeURIComponent(testUrl)}`
-            ];
-
-            for (const proxyUrl of proxyServices) {
-                try {
-                    const controller = new AbortController();
-                    const timeoutId = setTimeout(() => controller.abort(), 8000);
-
-                    const response = await fetch(proxyUrl, {
-                        method: 'GET',
-                        signal: controller.signal
-                    });
-
-                    clearTimeout(timeoutId);
-
-                    if (response.ok) {
-                        try {
-                            const data = await response.json();
-                            
-                            // Check HTTP status code from the proxy response
-                            if (data.status) {
-                                const httpCode = data.status.http_code;
-                                if (httpCode >= 200 && httpCode < 400) {
-                                    // Success - URL is accessible
-                                    hasSuccess = true;
-                                    break;
-                                } else if (httpCode >= 400) {
-                                    // Check if it's a clear DNS/connection error
-                                    const errorMsg = (data.status.url || '').toLowerCase();
-                                    if (errorMsg.includes('nxdomain') || 
-                                        errorMsg.includes('dns') || 
-                                        errorMsg.includes('name not resolved') ||
-                                        httpCode === 0) {
-                                        hasClearError = true;
-                                    }
-                                }
-                            }
-                            
-                            // If we got content, consider it accessible
-                            if (data.contents && data.contents.length > 0) {
-                                hasSuccess = true;
-                                break;
-                            }
-                        } catch (jsonError) {
-                            // If response is OK but JSON parse fails, still consider it accessible
-                            hasSuccess = true;
-                            break;
-                        }
+            for (const result of results) {
+                if (result.status === 'fulfilled') {
+                    if (result.value === true) {
+                        successCount++;
+                    } else if (result.value === false) {
+                        errorCount++;
+                    } else if (result.value === 'error') {
+                        hasClearError = true;
                     }
-                } catch (proxyError) {
-                    // Network error - don't treat as clear error, might be CORS/proxy issue
-                    console.log('Proxy check failed:', proxyError);
-                    continue;
                 }
             }
 
-            // If we got a clear success, accept it
-            if (hasSuccess) {
-                validationDiv.classList.remove('checking');
-                validationDiv.classList.add('valid');
-                urlInput.classList.remove('validating');
-                urlInput.classList.add('valid');
-                validationIcon.innerHTML = '✅';
-                validationText.textContent = 'URL is accessible';
+            // Decision logic
+            if (hasClearError) {
+                // Clear DNS/connection error detected
+                showInvalid('URL is not accessible. Please check the URL and ensure the website is online.');
+                return false;
+            } else if (successCount > 0) {
+                // At least one method succeeded
+                showValid('URL is accessible');
+                return true;
+            } else if (errorCount === 0) {
+                // All methods inconclusive - accept if format is valid
+                showValid('URL format is valid');
+                return true;
+            } else {
+                // Some methods failed but no clear error
+                showValid('URL format is valid');
                 return true;
             }
+        }
 
-            // Method 2: Iframe method - try to load the URL
+        // Method 1: CORS Proxy Check
+        async function checkWithProxy(url) {
             try {
-                const isValid = await new Promise((resolve) => {
-                    let resolved = false;
-                    const iframe = document.createElement('iframe');
-                    iframe.style.display = 'none';
-                    iframe.style.width = '1px';
-                    iframe.style.height = '1px';
-                    iframe.style.position = 'absolute';
-                    iframe.style.left = '-9999px';
-                    iframe.style.border = 'none';
-                    iframe.src = testUrl;
-                    
-                    const timeout = setTimeout(() => {
-                        if (!resolved) {
-                            resolved = true;
-                            if (document.body.contains(iframe)) {
-                                document.body.removeChild(iframe);
-                            }
-                            // Timeout doesn't mean it's invalid - might be slow loading
-                            resolve(null); // Return null for inconclusive
-                        }
-                    }, 6000);
+                const proxyUrl = `https://api.allorigins.win/get?url=${encodeURIComponent(url)}`;
+                const controller = new AbortController();
+                const timeoutId = setTimeout(() => controller.abort(), 8000);
 
-                    iframe.onload = () => {
-                        if (!resolved) {
-                            resolved = true;
-                            clearTimeout(timeout);
-                            setTimeout(() => {
-                                if (document.body.contains(iframe)) {
-                                    document.body.removeChild(iframe);
-                                }
-                            }, 100);
-                            resolve(true); // Loaded successfully
-                        }
-                    };
-
-                    iframe.onerror = () => {
-                        if (!resolved) {
-                            resolved = true;
-                            clearTimeout(timeout);
-                            if (document.body.contains(iframe)) {
-                                document.body.removeChild(iframe);
-                            }
-                            resolve(false); // Error loading
-                        }
-                    };
-
-                    document.body.appendChild(iframe);
+                const response = await fetch(proxyUrl, {
+                    method: 'GET',
+                    signal: controller.signal
                 });
 
-                if (isValid === true) {
-                    // Iframe loaded successfully
-                    validationDiv.classList.remove('checking');
-                    validationDiv.classList.add('valid');
-                    urlInput.classList.remove('validating');
-                    urlInput.classList.add('valid');
-                    validationIcon.innerHTML = '✅';
-                    validationText.textContent = 'URL is accessible';
-                    return true;
-                } else if (isValid === false) {
-                    // Iframe failed to load - clear error
-                    hasClearError = true;
+                clearTimeout(timeoutId);
+
+                if (response.ok) {
+                    const data = await response.json();
+                    
+                    // Check HTTP status code
+                    if (data.status) {
+                        const httpCode = data.status.http_code;
+                        
+                        // Success codes
+                        if (httpCode >= 200 && httpCode < 400) {
+                            return true;
+                        }
+                        
+                        // Clear error codes (DNS, connection errors)
+                        if (httpCode === 0 || 
+                            httpCode >= 500 ||
+                            (data.status.url && (
+                                data.status.url.includes('nxdomain') ||
+                                data.status.url.includes('dns') ||
+                                data.status.url.includes('name not resolved')
+                            ))) {
+                            return 'error';
+                        }
+                    }
+                    
+                    // If we got content, consider it valid
+                    if (data.contents && data.contents.length > 0) {
+                        return true;
+                    }
                 }
-                // If isValid is null (timeout), it's inconclusive - don't reject
-            } catch (iframeError) {
-                console.log('Iframe validation error:', iframeError);
-            }
-
-            // Only reject if we have a clear error (DNS failure, etc.)
-            if (hasClearError) {
-                validationDiv.classList.remove('checking');
-                validationDiv.classList.add('invalid');
-                urlInput.classList.remove('validating');
-                urlInput.classList.add('invalid');
-                validationIcon.innerHTML = '❌';
-                validationText.textContent = 'URL is not accessible. Please check the URL and ensure the website is online.';
+                
                 return false;
+            } catch (error) {
+                // Network error - inconclusive
+                return null;
             }
+        }
 
-            // If checks are inconclusive but URL format is valid, accept it
-            // The backend will do the final verification
-            validationDiv.classList.remove('checking');
-            validationDiv.classList.add('valid');
-            urlInput.classList.remove('validating');
-            urlInput.classList.add('valid');
-            validationIcon.innerHTML = '✅';
-            validationText.textContent = 'URL format is valid';
-            return true;
+        // Method 2: Iframe Check
+        function checkWithIframe(url) {
+            return new Promise((resolve) => {
+                let resolved = false;
+                const iframe = document.createElement('iframe');
+                iframe.style.cssText = 'display:none;width:1px;height:1px;position:absolute;left:-9999px;border:none;';
+                iframe.src = url;
+                
+                const timeout = setTimeout(() => {
+                    if (!resolved) {
+                        resolved = true;
+                        if (document.body.contains(iframe)) {
+                            document.body.removeChild(iframe);
+                        }
+                        resolve(null); // Timeout = inconclusive
+                    }
+                }, 6000);
+
+                iframe.onload = () => {
+                    if (!resolved) {
+                        resolved = true;
+                        clearTimeout(timeout);
+                        setTimeout(() => {
+                            if (document.body.contains(iframe)) {
+                                document.body.removeChild(iframe);
+                            }
+                        }, 100);
+                        resolve(true); // Loaded successfully
+                    }
+                };
+
+                iframe.onerror = () => {
+                    if (!resolved) {
+                        resolved = true;
+                        clearTimeout(timeout);
+                        if (document.body.contains(iframe)) {
+                            document.body.removeChild(iframe);
+                        }
+                        resolve(false); // Error loading
+                    }
+                };
+
+                document.body.appendChild(iframe);
+            });
+        }
+
+        // Method 3: Fetch Check (with no-cors)
+        async function checkWithFetch(url) {
+            try {
+                const controller = new AbortController();
+                const timeoutId = setTimeout(() => controller.abort(), 5000);
+                
+                await fetch(url, {
+                    method: 'HEAD',
+                    mode: 'no-cors',
+                    signal: controller.signal
+                });
+                
+                clearTimeout(timeoutId);
+                return true; // No error = likely accessible
+            } catch (error) {
+                // Check error type
+                if (error.name === 'AbortError') {
+                    return null; // Timeout = inconclusive
+                }
+                return false; // Other error
+            }
         }
 
         // Form submission handler
