@@ -19,7 +19,7 @@
     },
     {
       "parameters": {
-        "jsCode": "// Extract and validate input parameters\nconst targetUrl = $input.first().json.target_url || $input.first().json.body?.target_url;\nconst location = $input.first().json.location || $input.first().json.body?.location || 'United Kingdom';\nconst reportType = $input.first().json.report_type || $input.first().json.body?.report_type || 'onboarding';\nconst email = $input.first().json.email || $input.first().json.body?.email;\nconst pastReportId = $input.first().json.past_report_id || $input.first().json.body?.past_report_id;\n\n// NEW: Report audience parameter (client or internal)\nconst reportAudience = $input.first().json.report_audience || $input.first().json.body?.report_audience || 'client';\n\n// Validate inputs\nif (!targetUrl) {\n  throw new Error('target_url is required');\n}\n\n// Clean URL\nconst cleanUrl = targetUrl.replace(/^https?:\\/\\//, '').replace(/\\/$/, '');\n\nreturn {\n  json: {\n    target_url: cleanUrl,\n    location: location,\n    report_type: reportType.toLowerCase(),\n    report_audience: reportAudience.toLowerCase(), // 'client' or 'internal'\n    email: email,\n    past_report_id: pastReportId,\n    timestamp: new Date().toISOString(),\n    is_update: reportType === 'update'\n  }\n};"
+        "jsCode": "// Extract and validate input parameters\nconst targetUrl = $input.first().json.target_url || $input.first().json.body?.target_url;\nconst location = $input.first().json.location || $input.first().json.body?.location || 'United Kingdom';\nconst reportType = $input.first().json.report_type || $input.first().json.body?.report_type || 'onboarding';\nconst email = $input.first().json.email || $input.first().json.body?.email;\n\n// NEW: Report audience parameter (client or internal)\nconst reportAudience = $input.first().json.report_audience || $input.first().json.body?.report_audience || 'client';\n\n// Validate inputs\nif (!targetUrl) {\n  throw new Error('target_url is required');\n}\n\n// Clean URL\nconst cleanUrl = targetUrl.replace(/^https?:\\/\\//, '').replace(/\\/$/, '');\n\nreturn {\n  json: {\n    target_url: cleanUrl,\n    location: location,\n    report_type: reportType.toLowerCase(),\n    report_audience: reportAudience.toLowerCase(), // 'client' or 'internal'\n    email: email,\n    timestamp: new Date().toISOString(),\n  }\n};"
       },
       "id": "8351fad1-d254-4a73-80a4-306a7e0d7118",
       "name": "Validate Input",
@@ -256,8 +256,8 @@
       "type": "n8n-nodes-base.merge",
       "typeVersion": 3.2,
       "position": [
-        1120,
-        -240
+        960,
+        -256
       ],
       "id": "b09683b4-43fc-4bdd-ab82-f9a4f509d0ae",
       "name": "Merge2"
@@ -269,8 +269,8 @@
       "type": "n8n-nodes-base.code",
       "typeVersion": 2,
       "position": [
-        1392,
-        -240
+        1216,
+        -256
       ],
       "id": "fa4926f1-d955-4009-a9eb-74196d4069bd",
       "name": "Aggregate Data"
@@ -291,8 +291,8 @@
       "type": "@n8n/n8n-nodes-langchain.chainLlm",
       "typeVersion": 1.7,
       "position": [
-        1808,
-        -240
+        2256,
+        -256
       ],
       "id": "1fb77264-5cf1-44d1-88c9-93a2eb3649de",
       "name": "Onboarding Report Generator",
@@ -315,8 +315,8 @@
       "type": "@n8n/n8n-nodes-langchain.lmChatOpenAi",
       "typeVersion": 1.3,
       "position": [
-        1808,
-        -32
+        2256,
+        -144
       ],
       "id": "82549dbe-b310-41fc-9770-6cff9093b6a6",
       "name": "GPT-4.1 mini",
@@ -329,13 +329,13 @@
     },
     {
       "parameters": {
-        "jsCode": "// Build AI Prompt - SEO Onboarding Report with Audience-Specific Focus\nconst data = $input.first().json;\n\n// Extract data\nconst domainRank = data.domainRank?.domainRank || {};\nconst keywords = data.keywords?.keywords || {};\nconst backlinks = data.backlinks?.backlinks || {};\nconst onPage = data.onPage?.onPage || {};\nconst metadata = data.metadata || {};\n\n// Get report audience type\nconst reportAudience = metadata.reportAudience || 'client';\nconst isClientReport = reportAudience === 'client';\nconst isInternalReport = reportAudience === 'internal';\n\n// Format keywords lists\nconst formatKeywords = (kwList, limit = 10) => {\n  if (!kwList || kwList.length === 0) return '*No keywords in this category*';\n  return kwList.slice(0, limit).map((kw, i) => \n    `${i + 1}. **${kw.keyword}** (Rank: ${kw.rank}, Volume: ${kw.searchVolume}/mo, CPC: £${kw.cpc})`\n  ).join('\\n');\n};\n\n// ========== AUDIENCE-SPECIFIC INSTRUCTIONS ==========\nlet audienceInstructions = '';\nlet toneGuidelines = '';\n\nif (isClientReport) {\n  audienceInstructions = `\n## 🎯 REPORT AUDIENCE: CLIENT-FACING ONBOARDING\n\nThis is a CLIENT onboarding report. Your goal is to:\n- Welcome them warmly and professionally\n- Highlight the exciting opportunities ahead\n- Build confidence in the SEO strategy\n- Focus on potential and growth\n- Present challenges as \"opportunities for improvement\"`;\n\n  toneGuidelines = `\n### Tone & Style Guidelines:\n- Warm, welcoming, and professional\n- Optimistic and opportunity-focused\n- Emphasize potential ROI and growth\n- Use encouraging language\n- Frame technical issues as \"areas we'll improve together\"\n- Focus on quick wins and exciting opportunities\n- Build excitement about the partnership\n- Avoid alarming language about problems`;\n\n} else {\n  audienceInstructions = `\n## 🔍 REPORT AUDIENCE: INTERNAL TEAM AUDIT\n\nThis is an INTERNAL onboarding audit. Your goal is to:\n- Provide honest, unfiltered analysis\n- Identify all problems and risks clearly\n- Document technical debt and issues\n- Create actionable work items\n- Assess realistic effort required`;\n\n  toneGuidelines = `\n### Tone & Style Guidelines:\n- Direct, analytical, and honest\n- No sugar-coating - show the real picture\n- List ALL technical issues with severity\n- Include risk assessment\n- Document everything that needs fixing\n- Provide effort estimates for each task\n- Flag potential challenges and blockers\n- Include internal notes and observations`;\n}\n\n// ========== BUILD SYSTEM PROMPT ==========\nconst systemPrompt = `You are a Senior UK SEO Strategist creating a ${isClientReport ? 'CLIENT-FACING' : 'INTERNAL TEAM'} onboarding ${isClientReport ? 'report' : 'audit'}.\n\nYour expertise includes:\n- Technical SEO and site architecture optimization\n- Content strategy and keyword research\n- Link building and authority development\n- Local SEO and schema markup implementation\n- Conversion rate optimization\n- ROI-focused strategy development\n\n${isClientReport ? `\nCLIENT REPORT APPROACH:\n- Be warm, welcoming, and consultative\n- Focus on opportunities and potential\n- Build excitement about the partnership\n- Present a positive but realistic picture\n- Use encouraging, professional language\n- Highlight quick wins and growth potential\n- Frame challenges as opportunities\n` : `\nINTERNAL AUDIT APPROACH:\n- Be direct and analytical\n- Document ALL issues without filtering\n- Include severity ratings for problems\n- Provide realistic effort estimates\n- Flag risks and potential blockers\n- Create actionable work items\n- Include technical details\n`}\n\nFormat Requirements:\n- Use UK English spelling (optimisation, colour, etc.)\n- Well-structured Markdown with clear hierarchy\n- Bullet points for lists\n- **Bold** for key metrics\n- Tables for comparative data\n- ${isClientReport ? 'Emojis for visual interest (✓ 📈 🎯 ⚡ 🚀)' : 'Minimal emojis - focus on clarity'}`;\n\n// ========== BUILD USER PROMPT ==========\nconst userPrompt = `# ${isClientReport ? 'Client Onboarding Report' : 'Internal SEO Audit'}: ${domainRank.target || 'Unknown Website'}\n\n${audienceInstructions}\n${toneGuidelines}\n\n---\n\n## DATA ANALYSIS SUMMARY\n\n### 1. Authority & Traffic Metrics\n\n**Organic Performance:**\n- Estimated Monthly Traffic Value: £${domainRank.estimatedTrafficValue || 0}\n- Total Ranking Keywords: ${domainRank.totalKeywords || 0}\n- Top 3 Positions: ${domainRank.positions?.top3 || 0}\n- Top 10 Positions: ${domainRank.positions?.top10 || 0}\n- Page 2 Opportunities: ${domainRank.positions?.page2 || 0}\n- Page 3+ Positions: ${(domainRank.positions?.page3 || 0) + (domainRank.positions?.page4Plus || 0)}\n\n**Keyword Movement:**\n- New Keywords: +${domainRank.movement?.newKeywords || 0}\n- Improved: +${domainRank.movement?.improved || 0}\n- Declined: -${domainRank.movement?.declined || 0}\n- Lost: -${domainRank.movement?.lost || 0}\n\n**Backlink Profile:**\n- Total Backlinks: ${backlinks.totalBacklinks || 0}\n- Referring Domains: ${backlinks.referringDomains || 0}\n- Domain Rank: ${backlinks.rank || 0}\n- Dofollow Links: ${backlinks.dofollow || 0} (${backlinks.dofollowPercent || 0}%)\n- Nofollow Links: ${backlinks.nofollow || 0}\n- Broken Backlinks: ${backlinks.brokenBacklinks || 0}\n\n---\n\n### 2. Keyword Analysis\n\n**Overview:**\n- Total Keywords: ${keywords.summary?.totalKeywords || 0}\n- Total Search Volume: ${keywords.summary?.totalSearchVolume || 0}/month\n- **Branded Keywords:** ${keywords.summary?.brandedCount || 0} (${keywords.summary?.brandedPercent || 0}%)\n- **Unbranded Keywords:** ${keywords.summary?.unbrandedCount || 0} (${keywords.summary?.unbrandedPercent || 0}%)\n\n**Position Distribution:**\n- Top 3: ${keywords.distribution?.top3Count || 0}\n- Top 10: ${keywords.distribution?.top10Count || 0}\n- **Page 2 Opportunities:** ${keywords.distribution?.page2Count || 0}\n- Page 3: ${keywords.distribution?.page3Count || 0}\n- Deep (30+): ${keywords.distribution?.deepCount || 0}\n\n**Top Performing Keywords:**\n${formatKeywords(keywords.topPerformers, 10)}\n\n**Page 2 Quick Win Opportunities:**\n${formatKeywords(keywords.quickWinOpportunities, 10)}\n\n**Deeper Position Keywords:**\n${formatKeywords((keywords.allKeywords || []).filter(k => k.rank > 30), 8)}\n\n---\n\n### 3. Technical SEO (OnPage Analysis)\n- Crawl Status: ${onPage.crawlProgress || 'N/A'}\n- Pages Crawled: ${onPage.pagesCrawled || 0}\n- Critical Issues: ${onPage.issues?.critical ?? 'N/A'}\n- Warnings: ${onPage.issues?.warnings ?? 'N/A'}\n- Notices: ${onPage.issues?.notices ?? 'N/A'}\n- Broken Links: ${onPage.pageMetrics?.brokenLinks ?? 'N/A'}\n- Broken Resources: ${onPage.pageMetrics?.brokenResources ?? 'N/A'}\n- Duplicate Titles: ${onPage.pageMetrics?.duplicateTitle ?? 'N/A'}\n- Duplicate Descriptions: ${onPage.pageMetrics?.duplicateDescription ?? 'N/A'}\n- Duplicate Content: ${onPage.pageMetrics?.duplicateContent ?? 'N/A'}\n\n---\n\n## YOUR TASK: Generate ${isClientReport ? 'Professional Client Onboarding Report' : 'Internal SEO Audit Document'}\n\n${isClientReport ? `\n### REQUIRED STRUCTURE (CLIENT REPORT):\n\n### 1. Executive Summary\n- Warm welcome message\n- Current state overview (positive framing)\n- Biggest opportunities identified (exciting!)\n- Expected ROI and timeline\n- Overall SEO health score (X/100)\n\n### 2. Current Performance Analysis\n\n#### 2.1 Visibility & Rankings\n- Visibility score interpretation\n- Traffic value assessment (positive spin)\n- Competitive positioning\n\n#### 2.2 Keyword Positioning\n- Branded vs Unbranded analysis\n- Top performers celebration\n- Growth opportunities\n\n#### 2.3 Authority & Backlinks\n- Domain authority evaluation\n- Link profile strengths\n- Building opportunities\n\n### 3. Strategic Opportunities\n\n#### 3.1 🎯 Quick Wins (0-3 Months)\n- Page 2 keywords ready to move up\n- Easy optimisation targets\n- Expected quick results\n\n#### 3.2 Growth Strategy\n- Content opportunities\n- Authority building plan\n- Traffic growth potential\n\n### 4. Your SEO Roadmap\n\n#### Phase 1: Foundation (Months 1-3)\n- Quick wins implementation\n- Technical improvements\n- **Expected Outcomes**\n\n#### Phase 2: Growth (Months 4-6)\n- Content expansion\n- Authority building\n- **Expected Outcomes**\n\n#### Phase 3: Scaling (Months 7-9)\n- Market expansion\n- Competitive positioning\n- **Expected Outcomes**\n\n#### Phase 4: Leadership (Months 10-12)\n- Industry authority\n- Long-term dominance\n- **Expected Outcomes**\n\n### 5. Investment & ROI\n- Phase-by-phase investment (£)\n- Expected returns\n- 12-month projection\n\n### 6. Next Steps\n- Immediate actions\n- What we need from you\n- Exciting journey ahead!\n` : `\n### REQUIRED STRUCTURE (INTERNAL AUDIT):\n\n### 1. Audit Summary\n- Honest current state assessment\n- Critical issues requiring immediate attention\n- Risk assessment\n- Resource requirements estimate\n- Overall health score with breakdown\n\n### 2. Technical Issues Inventory\n\n#### 2.1 Critical Issues (P0 - Immediate)\n| Issue | Severity | Pages Affected | Effort | Notes |\n|-------|----------|----------------|--------|-------|\n(List ALL critical issues)\n\n#### 2.2 High Priority Issues (P1 - This Sprint)\n(Detailed list with effort estimates)\n\n#### 2.3 Medium Priority (P2 - Next Sprint)\n(List with notes)\n\n#### 2.4 Low Priority (P3 - Backlog)\n(Complete list)\n\n### 3. Keyword Analysis (Honest Assessment)\n\n#### 3.1 Strengths\n- What's working\n- Defensible positions\n\n#### 3.2 Weaknesses\n- Lost keywords analysis\n- Declining positions\n- Gaps vs competitors\n\n#### 3.3 Risks\n- Vulnerable rankings\n- Competitor threats\n\n### 4. Backlink Audit\n- Quality assessment (honest)\n- Toxic links identified\n- Gap analysis\n- Effort required for improvement\n\n### 5. Content Audit\n- Content gaps\n- Thin content issues\n- Cannibalisation problems\n- Required new content (with effort)\n\n### 6. Work Items & Sprint Planning\n\n#### Sprint 1 (Weeks 1-2)\n| Task | Priority | Effort | Owner | Notes |\n|------|----------|--------|-------|-------|\n\n#### Sprint 2 (Weeks 3-4)\n(Continue pattern)\n\n#### Backlog Items\n(Full list)\n\n### 7. Resource Requirements\n- Hours estimate by task type\n- Skills needed\n- Tool requirements\n- Budget considerations\n\n### 8. Risk Register\n| Risk | Probability | Impact | Mitigation |\n|------|-------------|--------|------------|\n\n### 9. Internal Notes\n- Observations not for client\n- Team discussion points\n- Potential challenges\n`}\n\n---\n\n**IMPORTANT:**\n${isClientReport ? `\n1. Keep tone warm, welcoming, and optimistic\n2. Focus on opportunities, not problems\n3. Use UK English (optimisation, colour)\n4. Include realistic but positive projections\n5. Build excitement about the partnership\n6. Use emojis appropriately for visual appeal\n7. End with enthusiasm and confidence\n` : `\n1. Be completely honest - no sugar-coating\n2. Document EVERY issue found\n3. Include severity and effort for all items\n4. Provide realistic timeline estimates\n5. Flag all risks and blockers\n6. Use UK English (optimisation, colour)\n7. Create actionable sprint items\n8. Include internal notes section\n`}\n\nGenerate the complete ${isClientReport ? 'client onboarding report' : 'internal audit document'} now.`;\n\nreturn {\n  systemPrompt: systemPrompt,\n  userPrompt: userPrompt,\n  targetWebsite: domainRank.target || 'Unknown',\n  reportAudience: reportAudience,\n  generatedAt: new Date().toISOString()\n};"
+        "jsCode": "// Build AI Prompt - SEO Onboarding Report with Audience-Specific Focus\nconst input = $input.first().json;\n\n// ✅ FIX: Extract aggregatedData - Handle nested structure from Validate Data node\nconst data = input.aggregatedData || input;\n\n// Extract data\nconst domainRank = data.domainRank?.domainRank || {};\nconst keywords = data.keywords?.keywords || {};\nconst backlinks = data.backlinks?.backlinks || {};\nconst onPage = data.onPage?.onPage || {};\nconst metadata = data.metadata || {};\n\n// ✅ FIX: Get target URL from multiple sources (handle case sensitivity)\nconst targetWebsite = metadata.targetUrl ||      // Lowercase 'u' (correct)\n                      metadata.targetURL ||      // Uppercase 'U' (fallback)\n                      domainRank.target ||       // From domain rank data\n                      metadata.target_url ||     // Snake case (fallback)\n                      'Unknown';\n\n// Get report audience type\nconst reportAudience = metadata.reportAudience || 'client';\nconst isClientReport = reportAudience === 'client';\nconst isInternalReport = reportAudience === 'internal';\n\n// Format keywords lists\nconst formatKeywords = (kwList, limit = 10) => {\n  if (!kwList || kwList.length === 0) return '*No keywords in this category*';\n  return kwList.slice(0, limit).map((kw, i) => \n    `${i + 1}. **${kw.keyword}** (Rank: ${kw.rank}, Volume: ${kw.searchVolume}/mo, CPC: £${kw.cpc})`\n  ).join('\\n');\n};\n\n// ========== AUDIENCE-SPECIFIC INSTRUCTIONS ==========\nlet audienceInstructions = '';\nlet toneGuidelines = '';\n\nif (isClientReport) {\n  audienceInstructions = `\n## 🎯 REPORT AUDIENCE: CLIENT-FACING ONBOARDING\n\nThis is a CLIENT onboarding report. Your goal is to:\n- Welcome them warmly and professionally\n- Highlight the exciting opportunities ahead\n- Build confidence in the SEO strategy\n- Focus on potential and growth\n- Present challenges as \"opportunities for improvement\"`;\n\n  toneGuidelines = `\n### Tone & Style Guidelines:\n- Warm, welcoming, and professional\n- Optimistic and opportunity-focused\n- Emphasize potential ROI and growth\n- Use encouraging language\n- Frame technical issues as \"areas we'll improve together\"\n- Focus on quick wins and exciting opportunities\n- Build excitement about the partnership\n- Avoid alarming language about problems`;\n\n} else {\n  audienceInstructions = `\n## 🔍 REPORT AUDIENCE: INTERNAL TEAM AUDIT\n\nThis is an INTERNAL onboarding audit. Your goal is to:\n- Provide honest, unfiltered analysis\n- Identify all problems and risks clearly\n- Document technical debt and issues\n- Create actionable work items\n- Assess realistic effort required`;\n\n  toneGuidelines = `\n### Tone & Style Guidelines:\n- Direct, analytical, and honest\n- No sugar-coating - show the real picture\n- List ALL technical issues with severity\n- Include risk assessment\n- Document everything that needs fixing\n- Provide effort estimates for each task\n- Flag potential challenges and blockers\n- Include internal notes and observations`;\n}\n\n// ========== BUILD SYSTEM PROMPT ==========\nconst systemPrompt = `You are a Senior UK SEO Strategist creating a ${isClientReport ? 'CLIENT-FACING' : 'INTERNAL TEAM'} onboarding ${isClientReport ? 'report' : 'audit'}.\n\nYour expertise includes:\n- Technical SEO and site architecture optimization\n- Content strategy and keyword research\n- Link building and authority development\n- Local SEO and schema markup implementation\n- Conversion rate optimization\n- ROI-focused strategy development\n\n${isClientReport ? `\nCLIENT REPORT APPROACH:\n- Be warm, welcoming, and consultative\n- Focus on opportunities and potential\n- Build excitement about the partnership\n- Present a positive but realistic picture\n- Use encouraging, professional language\n- Highlight quick wins and growth potential\n- Frame challenges as opportunities\n` : `\nINTERNAL AUDIT APPROACH:\n- Be direct and analytical\n- Document ALL issues without filtering\n- Include severity ratings for problems\n- Provide realistic effort estimates\n- Flag risks and potential blockers\n- Create actionable work items\n- Include technical details\n`}\n\nFormat Requirements:\n- Use UK English spelling (optimisation, colour, etc.)\n- Well-structured Markdown with clear hierarchy\n- Bullet points for lists\n- **Bold** for key metrics\n- Tables for comparative data\n- ${isClientReport ? 'Emojis for visual interest (✓ 📈 🎯 ⚡ 🚀)' : 'Minimal emojis - focus on clarity'}`;\n\n// ========== BUILD USER PROMPT ==========\nconst userPrompt = `# ${isClientReport ? 'Client Onboarding Report' : 'Internal SEO Audit'}: ${targetWebsite}\n\n${audienceInstructions}\n${toneGuidelines}\n\n---\n\n## DATA ANALYSIS SUMMARY\n\n### 1. Authority & Traffic Metrics\n\n**Organic Performance:**\n- Estimated Monthly Traffic Value: £${domainRank.estimatedTrafficValue || 0}\n- Total Ranking Keywords: ${domainRank.totalKeywords || 0}\n- Top 3 Positions: ${domainRank.positions?.top3 || 0}\n- Top 10 Positions: ${domainRank.positions?.top10 || 0}\n- Page 2 Opportunities: ${domainRank.positions?.page2 || 0}\n- Page 3+ Positions: ${(domainRank.positions?.page3 || 0) + (domainRank.positions?.page4Plus || 0)}\n\n**Keyword Movement:**\n- New Keywords: +${domainRank.movement?.newKeywords || 0}\n- Improved: +${domainRank.movement?.improved || 0}\n- Declined: -${domainRank.movement?.declined || 0}\n- Lost: -${domainRank.movement?.lost || 0}\n\n**Backlink Profile:**\n- Total Backlinks: ${backlinks.totalBacklinks || 0}\n- Referring Domains: ${backlinks.referringDomains || 0}\n- Domain Rank: ${backlinks.rank || 0}\n- Dofollow Links: ${backlinks.dofollow || 0} (${backlinks.dofollowPercent || 0}%)\n- Nofollow Links: ${backlinks.nofollow || 0}\n- Broken Backlinks: ${backlinks.brokenBacklinks || 0}\n\n---\n\n### 2. Keyword Analysis\n\n**Overview:**\n- Total Keywords: ${keywords.summary?.totalKeywords || 0}\n- Total Search Volume: ${keywords.summary?.totalSearchVolume || 0}/month\n- **Branded Keywords:** ${keywords.summary?.brandedCount || 0} (${keywords.summary?.brandedPercent || 0}%)\n- **Unbranded Keywords:** ${keywords.summary?.unbrandedCount || 0} (${keywords.summary?.unbrandedPercent || 0}%)\n\n**Position Distribution:**\n- Top 3: ${keywords.distribution?.top3Count || 0}\n- Top 10: ${keywords.distribution?.top10Count || 0}\n- **Page 2 Opportunities:** ${keywords.distribution?.page2Count || 0}\n- Page 3: ${keywords.distribution?.page3Count || 0}\n- Deep (30+): ${keywords.distribution?.deepCount || 0}\n\n**Top Performing Keywords:**\n${formatKeywords(keywords.topPerformers, 10)}\n\n**Page 2 Quick Win Opportunities:**\n${formatKeywords(keywords.quickWinOpportunities, 10)}\n\n**Deeper Position Keywords:**\n${formatKeywords((keywords.allKeywords || []).filter(k => k.rank > 30), 8)}\n\n---\n\n### 3. Technical SEO (OnPage Analysis)\n- Crawl Status: ${onPage.crawlProgress || 'N/A'}\n- Pages Crawled: ${onPage.pagesCrawled || 0}\n- Critical Issues: ${onPage.issues?.critical ?? 'N/A'}\n- Warnings: ${onPage.issues?.warnings ?? 'N/A'}\n- Notices: ${onPage.issues?.notices ?? 'N/A'}\n- Broken Links: ${onPage.pageMetrics?.brokenLinks ?? 'N/A'}\n- Broken Resources: ${onPage.pageMetrics?.brokenResources ?? 'N/A'}\n- Duplicate Titles: ${onPage.pageMetrics?.duplicateTitle ?? 'N/A'}\n- Duplicate Descriptions: ${onPage.pageMetrics?.duplicateDescription ?? 'N/A'}\n- Duplicate Content: ${onPage.pageMetrics?.duplicateContent ?? 'N/A'}\n\n---\n\n## YOUR TASK: Generate ${isClientReport ? 'Professional Client Onboarding Report' : 'Internal SEO Audit Document'}\n\n${isClientReport ? `\n### REQUIRED STRUCTURE (CLIENT REPORT):\n\n### 1. Executive Summary\n- Warm welcome message\n- Current state overview (positive framing)\n- Biggest opportunities identified (exciting!)\n- Expected ROI and timeline\n- Overall SEO health score (X/100)\n\n### 2. Current Performance Analysis\n\n#### 2.1 Visibility & Rankings\n- Visibility score interpretation\n- Traffic value assessment (positive spin)\n- Competitive positioning\n\n#### 2.2 Keyword Positioning\n- Branded vs Unbranded analysis\n- Top performers celebration\n- Growth opportunities\n\n#### 2.3 Authority & Backlinks\n- Domain authority evaluation\n- Link profile strengths\n- Building opportunities\n\n### 3. Strategic Opportunities\n\n#### 3.1 🎯 Quick Wins (0-3 Months)\n- Page 2 keywords ready to move up\n- Easy optimisation targets\n- Expected quick results\n\n#### 3.2 Growth Strategy\n- Content opportunities\n- Authority building plan\n- Traffic growth potential\n\n### 4. Your SEO Roadmap\n\n#### Phase 1: Foundation (Months 1-3)\n- Quick wins implementation\n- Technical improvements\n- **Expected Outcomes**\n\n#### Phase 2: Growth (Months 4-6)\n- Content expansion\n- Authority building\n- **Expected Outcomes**\n\n#### Phase 3: Scaling (Months 7-9)\n- Market expansion\n- Competitive positioning\n- **Expected Outcomes**\n\n#### Phase 4: Leadership (Months 10-12)\n- Industry authority\n- Long-term dominance\n- **Expected Outcomes**\n\n### 5. Investment & ROI\n- Phase-by-phase investment (£)\n- Expected returns\n- 12-month projection\n\n### 6. Next Steps\n- Immediate actions\n- What we need from you\n- Exciting journey ahead!\n` : `\n### REQUIRED STRUCTURE (INTERNAL AUDIT):\n\n### 1. Audit Summary\n- Honest current state assessment\n- Critical issues requiring immediate attention\n- Risk assessment\n- Resource requirements estimate\n- Overall health score with breakdown\n\n### 2. Technical Issues Inventory\n\n#### 2.1 Critical Issues (P0 - Immediate)\n| Issue | Severity | Pages Affected | Effort | Notes |\n|-------|----------|----------------|--------|-------|\n(List ALL critical issues)\n\n#### 2.2 High Priority Issues (P1 - This Sprint)\n(Detailed list with effort estimates)\n\n#### 2.3 Medium Priority (P2 - Next Sprint)\n(List with notes)\n\n#### 2.4 Low Priority (P3 - Backlog)\n(Complete list)\n\n### 3. Keyword Analysis (Honest Assessment)\n\n#### 3.1 Strengths\n- What's working\n- Defensible positions\n\n#### 3.2 Weaknesses\n- Lost keywords analysis\n- Declining positions\n- Gaps vs competitors\n\n#### 3.3 Risks\n- Vulnerable rankings\n- Competitor threats\n\n### 4. Backlink Audit\n- Quality assessment (honest)\n- Toxic links identified\n- Gap analysis\n- Effort required for improvement\n\n### 5. Content Audit\n- Content gaps\n- Thin content issues\n- Cannibalisation problems\n- Required new content (with effort)\n\n### 6. Work Items & Sprint Planning\n\n#### Sprint 1 (Weeks 1-2)\n| Task | Priority | Effort | Owner | Notes |\n|------|----------|--------|-------|-------|\n\n#### Sprint 2 (Weeks 3-4)\n(Continue pattern)\n\n#### Backlog Items\n(Full list)\n\n### 7. Resource Requirements\n- Hours estimate by task type\n- Skills needed\n- Tool requirements\n- Budget considerations\n\n### 8. Risk Register\n| Risk | Probability | Impact | Mitigation |\n|------|-------------|--------|------------|\n\n### 9. Internal Notes\n- Observations not for client\n- Team discussion points\n- Potential challenges\n`}\n\n---\n\n**IMPORTANT:**\n${isClientReport ? `\n1. Keep tone warm, welcoming, and optimistic\n2. Focus on opportunities, not problems\n3. Use UK English (optimisation, colour)\n4. Include realistic but positive projections\n5. Build excitement about the partnership\n6. Use emojis appropriately for visual appeal\n7. End with enthusiasm and confidence\n` : `\n1. Be completely honest - no sugar-coating\n2. Document EVERY issue found\n3. Include severity and effort for all items\n4. Provide realistic timeline estimates\n5. Flag all risks and blockers\n6. Use UK English (optimisation, colour)\n7. Create actionable sprint items\n8. Include internal notes section\n`}\n\nGenerate the complete ${isClientReport ? 'client onboarding report' : 'internal audit document'} now.`;\n\nreturn {\n  systemPrompt: systemPrompt,\n  userPrompt: userPrompt,\n  targetWebsite: targetWebsite,\n  reportAudience: reportAudience,\n  generatedAt: new Date().toISOString()\n};"
       },
       "type": "n8n-nodes-base.code",
       "typeVersion": 2,
       "position": [
-        1536,
-        -240
+        2096,
+        -256
       ],
       "id": "384e2548-0b8d-421c-8c76-1cf14e75b864",
       "name": "Generate Prompt"
@@ -360,8 +360,8 @@
       "type": "n8n-nodes-base.googleDrive",
       "typeVersion": 3,
       "position": [
-        2368,
-        -240
+        2752,
+        -256
       ],
       "id": "d822c5eb-bc06-4b56-8434-7188e35e5600",
       "name": "Google Drive",
@@ -379,8 +379,8 @@
       "type": "n8n-nodes-base.code",
       "typeVersion": 2,
       "position": [
-        2160,
-        -240
+        2576,
+        -256
       ],
       "id": "725db8c1-de22-4bef-bf35-511d10e2416b",
       "name": "Convert To Markdown"
@@ -396,8 +396,8 @@
       "type": "n8n-nodes-base.emailSend",
       "typeVersion": 2.1,
       "position": [
-        2576,
-        -240
+        2928,
+        -256
       ],
       "id": "a7a580b5-8506-4a41-aa65-3c20fef20020",
       "name": "Send Report",
@@ -440,8 +440,8 @@
       "type": "n8n-nodes-base.httpRequest",
       "typeVersion": 4.3,
       "position": [
-        1152,
-        736
+        1856,
+        1424
       ],
       "id": "d8dc0caa-279a-4fd6-b85a-232668c8e2a9",
       "name": "Search Previous Reports",
@@ -460,8 +460,8 @@
       "type": "n8n-nodes-base.code",
       "typeVersion": 2,
       "position": [
-        1360,
-        736
+        2176,
+        1408
       ],
       "id": "dee59dc8-d309-4a0e-8c55-8fd25035d152",
       "name": "Get Previous Report"
@@ -479,8 +479,8 @@
       "type": "n8n-nodes-base.googleDrive",
       "typeVersion": 3,
       "position": [
-        1536,
-        736
+        2384,
+        1392
       ],
       "id": "bf96c82d-bb98-437d-99d9-cd35f79d76f6",
       "name": "Download Previous Report",
@@ -499,8 +499,8 @@
       "type": "n8n-nodes-base.code",
       "typeVersion": 2,
       "position": [
-        1728,
-        736
+        2528,
+        1392
       ],
       "id": "49ec9737-dc47-41b6-a992-44b664db7ca1",
       "name": "Parse Previous Report"
@@ -521,8 +521,8 @@
       "type": "@n8n/n8n-nodes-langchain.chainLlm",
       "typeVersion": 1.7,
       "position": [
-        2096,
-        736
+        2896,
+        1392
       ],
       "id": "62274746-1951-4d00-ad6f-5fbda3d12328",
       "name": "Performance Report Generator",
@@ -538,7 +538,7 @@
       "typeVersion": 2.1,
       "position": [
         -880,
-        832
+        1504
       ],
       "id": "a042b993-eef1-41bb-a636-2fdbeabb451c",
       "name": "Webhook1",
@@ -553,8 +553,8 @@
       "type": "n8n-nodes-base.code",
       "typeVersion": 2,
       "position": [
-        -608,
-        832
+        -592,
+        1504
       ]
     },
     {
@@ -572,7 +572,7 @@
       "typeVersion": 4.3,
       "position": [
         -368,
-        592
+        1264
       ],
       "id": "40b2441e-ef49-4fd9-9a6b-e78dd4f77d11",
       "name": "OnPage Task Post1",
@@ -604,7 +604,7 @@
       "typeVersion": 4.3,
       "position": [
         112,
-        640
+        1312
       ],
       "credentials": {
         "httpBasicAuth": {
@@ -628,7 +628,7 @@
       "typeVersion": 4.3,
       "position": [
         112,
-        832
+        1504
       ],
       "id": "db5314cd-c7fe-4b92-8ce7-3dec9d5a42a1",
       "name": "Ranked Keywords1",
@@ -654,7 +654,7 @@
       "typeVersion": 4.3,
       "position": [
         112,
-        1024
+        1696
       ],
       "id": "5dc121fb-69ea-4341-ad79-d28daedb85dc",
       "name": "Backlinks Summary1",
@@ -675,7 +675,7 @@
       "typeVersion": 2,
       "position": [
         -112,
-        544
+        1216
       ]
     },
     {
@@ -692,8 +692,8 @@
       "type": "n8n-nodes-base.httpRequest",
       "typeVersion": 4.3,
       "position": [
-        112,
-        448
+        128,
+        1008
       ],
       "id": "63be924e-674c-4f61-94a6-e73966df5f29",
       "name": "OnPage Summary1",
@@ -712,7 +712,7 @@
       "typeVersion": 2,
       "position": [
         320,
-        640
+        1312
       ],
       "id": "5b6d7633-9702-4ac7-bd59-f09fac5e8cc2",
       "name": "Parse Domain Rank1"
@@ -725,7 +725,7 @@
       "typeVersion": 2,
       "position": [
         320,
-        832
+        1504
       ],
       "id": "486a3676-1158-4f8d-8524-64aa0fa6f5c7",
       "name": "Parse Ranked Keywords1"
@@ -738,7 +738,7 @@
       "typeVersion": 2,
       "position": [
         320,
-        448
+        1008
       ],
       "id": "0e9ece8d-b93e-4266-b6e1-3bb0db80afcc",
       "name": "Parse OnPage Summary1"
@@ -751,7 +751,7 @@
       "typeVersion": 2,
       "position": [
         320,
-        1024
+        1696
       ],
       "id": "33ec2808-be5c-497f-8ce3-6b0cbd92cb57",
       "name": "Parse Backlinks Summary1"
@@ -762,7 +762,7 @@
       "typeVersion": 3.2,
       "position": [
         704,
-        560
+        1232
       ],
       "id": "850f81ac-214a-4463-83b4-264d7a550503",
       "name": "Merge3"
@@ -773,7 +773,7 @@
       "typeVersion": 3.2,
       "position": [
         704,
-        896
+        1568
       ],
       "id": "f11f9614-ce56-4219-b6ff-d140df69071b",
       "name": "Merge4"
@@ -783,8 +783,8 @@
       "type": "n8n-nodes-base.merge",
       "typeVersion": 3.2,
       "position": [
-        880,
-        736
+        816,
+        1408
       ],
       "id": "0c00410c-91af-44c8-b1a3-4fced553514e",
       "name": "Merge5"
@@ -797,7 +797,7 @@
       "typeVersion": 2,
       "position": [
         1024,
-        736
+        1408
       ],
       "id": "8726d328-126d-4a3c-a9ed-8a64da0b0db5",
       "name": "Aggregate Data1"
@@ -819,8 +819,8 @@
       "type": "@n8n/n8n-nodes-langchain.lmChatOpenAi",
       "typeVersion": 1.3,
       "position": [
-        2096,
-        912
+        2896,
+        1552
       ],
       "id": "a628c7e2-c365-4b38-a633-cc7f0ba9e504",
       "name": "GPT-4.1 mini1",
@@ -838,8 +838,8 @@
       "type": "n8n-nodes-base.code",
       "typeVersion": 2,
       "position": [
-        1936,
-        736
+        2704,
+        1392
       ],
       "id": "d72ade9e-9ee6-4f54-8f4e-9b48671564ac",
       "name": "Generate Prompt1"
@@ -864,8 +864,8 @@
       "type": "n8n-nodes-base.googleDrive",
       "typeVersion": 3,
       "position": [
-        2544,
-        736
+        3312,
+        1392
       ],
       "id": "04ac38fa-1ef6-4ea7-bb84-832a72fefb7d",
       "name": "Google Drive1",
@@ -883,8 +883,8 @@
       "type": "n8n-nodes-base.code",
       "typeVersion": 2,
       "position": [
-        2384,
-        736
+        3168,
+        1392
       ],
       "id": "de8e4350-2056-49e3-9ea9-b1eb835ebc67",
       "name": "Convert To Markdown1"
@@ -900,8 +900,8 @@
       "type": "n8n-nodes-base.emailSend",
       "typeVersion": 2.1,
       "position": [
-        2752,
-        736
+        3472,
+        1392
       ],
       "id": "ad4a8a91-2fa3-48c9-a03e-59c4b693ac45",
       "name": "Send Report1",
@@ -937,8 +937,8 @@
       "type": "n8n-nodes-base.stickyNote",
       "typeVersion": 1,
       "position": [
-        1200,
-        1088
+        -736,
+        2352
       ],
       "id": "9e5bb221-013c-453b-9259-cea53682b7e7",
       "name": "Sticky Note1"
@@ -955,11 +955,11 @@
           "conditions": [
             {
               "id": "5cfc233a-788c-40d7-b7d1-c325f63b4665",
-              "leftValue": "=={{ $json.files && $json.files.length > 0 && $json.files.some(file => {\n  const fileName = file.name || '';\n  const targetUrl = $('Aggregate Data1').first().json.metadata?.targetUrl || '';\n  const dateFrom = $('Aggregate Data1').first().json.metadata?.dateFrom || '';\n  const dateTo = $('Aggregate Data1').first().json.metadata?.dateTo || '';\n  \n  // Clean URL to match filename pattern (remove https://, www., replace dots with underscores)\n  const cleanUrl = targetUrl\n    .replace(/^https?:\\/\\//, '')\n    .replace(/^www\\./, '')\n    .replace(/\\./g, '_')\n    .replace(/[^a-zA-Z0-9_]/g, '');\n  \n  // Build expected filename pattern\n  const expectedPattern = `SEO_Performance_Report_${cleanUrl}`;\n  \n  // Check if filename starts with pattern and contains date range\n  return fileName.includes(expectedPattern) && \n         (dateFrom ? fileName.includes(dateFrom) : true) &&\n         (dateTo ? fileName.includes(dateTo) : true);\n}) }}",
+              "leftValue": "={{ Boolean((() => {\n  try {\n    const files = $json.files || [];\n    if (files.length === 0) return false;\n    \n    const metadata = $('Aggregate Data1').first().json.metadata || {};\n    const targetUrl = metadata.targetUrl || '';\n    const dateFrom = metadata.dateFrom || '';\n    const dateTo = metadata.dateTo || '';\n    \n    if (!targetUrl) return false;\n    \n    // Clean URL - replace dots FIRST to preserve www_\n    let cleanUrl = targetUrl\n      .replace(/^https?:\\/\\//, '')\n      .replace(/\\./g, '_')\n      .replace(/[^a-zA-Z0-9_]/g, '');\n    \n    const expectedPattern = `SEO_Performance_Report_${cleanUrl}`;\n    \n    const hasMatch = files.some(file => {\n      const fileName = file.name || '';\n      if (!fileName.includes(expectedPattern)) return false;\n      if (dateFrom && !fileName.includes(dateFrom)) return false;\n      if (dateTo && !fileName.includes(dateTo)) return false;\n      return true;\n    });\n    \n    return hasMatch;\n  } catch (error) {\n    return false;\n  }\n})()) }}",
               "rightValue": "",
               "operator": {
-                "type": "string",
-                "operation": "empty",
+                "type": "boolean",
+                "operation": "true",
                 "singleValue": true
               }
             }
@@ -971,8 +971,8 @@
       "type": "n8n-nodes-base.if",
       "typeVersion": 2.3,
       "position": [
-        1312,
-        288
+        2000,
+        1424
       ],
       "id": "d6e41620-2720-41b3-bcd1-8132a02b1708",
       "name": "If"
@@ -984,8 +984,8 @@
       "type": "n8n-nodes-base.code",
       "typeVersion": 2,
       "position": [
-        1536,
-        304
+        2160,
+        1712
       ],
       "id": "a886fb40-1ab1-40ce-9497-2542d3619b3e",
       "name": "Prepare Data Without Previous Report"
@@ -1006,8 +1006,8 @@
       "type": "@n8n/n8n-nodes-langchain.chainLlm",
       "typeVersion": 1.7,
       "position": [
-        1904,
-        304
+        2608,
+        1712
       ],
       "id": "3fec2fae-6614-4d27-9fa3-a1beda73d351",
       "name": "Performance Report Generator1",
@@ -1026,8 +1026,8 @@
       "type": "@n8n/n8n-nodes-langchain.lmChatOpenAi",
       "typeVersion": 1.3,
       "position": [
-        1904,
-        512
+        2608,
+        1888
       ],
       "id": "39a68c21-51e2-4240-80d7-703f4261a4ce",
       "name": "OpenAI Chat Model",
@@ -1045,8 +1045,8 @@
       "type": "n8n-nodes-base.code",
       "typeVersion": 2,
       "position": [
-        2192,
-        304
+        2976,
+        1712
       ],
       "id": "2d3e4c42-9088-49a7-9df2-3f02ea2203d3",
       "name": "Convert To Markdown2"
@@ -1071,8 +1071,8 @@
       "type": "n8n-nodes-base.googleDrive",
       "typeVersion": 3,
       "position": [
-        2400,
-        304
+        3280,
+        1712
       ],
       "id": "b592f706-390d-461e-bdf2-8aa50c093d5f",
       "name": "Google Drive2",
@@ -1094,8 +1094,8 @@
       "type": "n8n-nodes-base.emailSend",
       "typeVersion": 2.1,
       "position": [
-        2640,
-        304
+        3504,
+        1712
       ],
       "id": "2a543d13-9c5c-4ff7-9cd1-5b1035219054",
       "name": "Send Report2",
@@ -1114,11 +1114,458 @@
       "type": "n8n-nodes-base.code",
       "typeVersion": 2,
       "position": [
-        1712,
-        304
+        2368,
+        1712
       ],
       "id": "69128cf2-2898-4010-ade9-5be192b17247",
       "name": "Generate Prompt2"
+    },
+    {
+      "parameters": {
+        "jsCode": "// Test Data Node - Complete Mock API Responses\n// Copy this entire code into a Code node in n8n\n// Set Mode to: \"Run Once for All Items\"\n\nconst testData = [\n  {\n    \"success\": true,\n    \"status\": \"complete\",\n    \"onPage\": {\n      \"crawlProgress\": \"in_progress\",\n      \"pagesCrawled\": 0,\n      \"pagesInQueue\": 0,\n      \"issues\": {\n        \"critical\": 0,\n        \"warnings\": 0,\n        \"notices\": 0\n      },\n      \"pageMetrics\": {\n        \"brokenLinks\": 14,\n        \"brokenResources\": 0,\n        \"duplicateTitle\": 0,\n        \"duplicateDescription\": 0,\n        \"duplicateContent\": 0\n      },\n      \"performance\": {\n        \"avgPageLoadTime\": 0,\n        \"https\": 0,\n        \"mobileUsability\": false\n      }\n    }\n  },\n  {\n    \"success\": true,\n    \"domainRank\": {\n      \"target\": \"www.croydonathletic.com\",\n      \"location\": 2826,\n      \"language\": \"en\",\n      \"dateFrom\": \"2025-10-01\",\n      \"dateTo\": \"2026-01-07\",\n      \"dataPoints\": 3,\n      \"positions\": {\n        \"top3\": 7,\n        \"top10\": 27,\n        \"page2\": 15,\n        \"page3\": 16,\n        \"page4Plus\": 60\n      },\n      \"estimatedTrafficValue\": 3818,\n      \"totalKeywords\": 118,\n      \"periodChanges\": {\n        \"keywordsChange\": -8,\n        \"trafficValueChange\": 1910,\n        \"keywordsStart\": 126,\n        \"keywordsEnd\": 118,\n        \"trafficStart\": 1908,\n        \"trafficEnd\": 3818\n      },\n      \"movement\": {\n        \"newKeywords\": 37,\n        \"improved\": 22,\n        \"declined\": 49,\n        \"lost\": 40\n      }\n    }\n  },\n  {\n    \"success\": true,\n    \"keywords\": {\n      \"summary\": {\n        \"totalKeywords\": 118,\n        \"totalSearchVolume\": 57870,\n        \"totalETV\": 3818.05,\n        \"brandedCount\": 0,\n        \"unbrandedCount\": 118,\n        \"brandedPercent\": 0,\n        \"unbrandedPercent\": 100\n      },\n      \"distribution\": {\n        \"top3Count\": 6,\n        \"top10Count\": 23,\n        \"page2Count\": 12,\n        \"page3Count\": 18,\n        \"deepCount\": 65\n      },\n      \"topPerformers\": [\n        {\n          \"keyword\": \"afc croydon athletic\",\n          \"rank\": 1,\n          \"searchVolume\": 4400,\n          \"etv\": 1337.6,\n          \"cpc\": 1.2,\n          \"difficulty\": 3,\n          \"intent\": \"navigational\",\n          \"url\": \"https://www.croydonathletic.com/\",\n          \"isBranded\": false,\n          \"isNew\": false\n        },\n        {\n          \"keyword\": \"croydon athletic\",\n          \"rank\": 1,\n          \"searchVolume\": 4400,\n          \"etv\": 1337.6,\n          \"cpc\": 1.2,\n          \"difficulty\": 8,\n          \"intent\": \"navigational\",\n          \"url\": \"https://www.croydonathletic.com/\",\n          \"isBranded\": false,\n          \"isNew\": false\n        },\n        {\n          \"keyword\": \"croydon athletic fc\",\n          \"rank\": 1,\n          \"searchVolume\": 320,\n          \"etv\": 97.28,\n          \"cpc\": 0,\n          \"difficulty\": 1,\n          \"intent\": \"navigational\",\n          \"url\": \"https://www.croydonathletic.com/\",\n          \"isBranded\": false,\n          \"isNew\": false\n        },\n        {\n          \"keyword\": \"afc croydon\",\n          \"rank\": 2,\n          \"searchVolume\": 4400,\n          \"etv\": 712.8,\n          \"cpc\": 1.2,\n          \"difficulty\": 0,\n          \"intent\": \"informational\",\n          \"url\": \"https://www.croydonathletic.com/\",\n          \"isBranded\": false,\n          \"isNew\": false\n        },\n        {\n          \"keyword\": \"croydon athletic football club\",\n          \"rank\": 2,\n          \"searchVolume\": 320,\n          \"etv\": 51.84,\n          \"cpc\": 0,\n          \"difficulty\": 2,\n          \"intent\": \"navigational\",\n          \"url\": \"https://www.croydonathletic.com/\",\n          \"isBranded\": false,\n          \"isNew\": false\n        },\n        {\n          \"keyword\": \"croydon athletics\",\n          \"rank\": 2,\n          \"searchVolume\": 210,\n          \"etv\": 34.02,\n          \"cpc\": 0,\n          \"difficulty\": 13,\n          \"intent\": \"navigational\",\n          \"url\": \"https://www.croydonathletic.com/\",\n          \"isBranded\": false,\n          \"isNew\": false\n        },\n        {\n          \"keyword\": \"afc croydon athletic twitter\",\n          \"rank\": 4,\n          \"searchVolume\": 90,\n          \"etv\": 8.76,\n          \"cpc\": 0,\n          \"difficulty\": 5,\n          \"intent\": \"navigational\",\n          \"url\": \"https://www.croydonathletic.com/\",\n          \"isBranded\": false,\n          \"isNew\": false\n        },\n        {\n          \"keyword\": \"croydon football club fixtures\",\n          \"rank\": 4,\n          \"searchVolume\": 140,\n          \"etv\": 9.23,\n          \"cpc\": 0,\n          \"difficulty\": 0,\n          \"intent\": \"informational\",\n          \"url\": \"https://www.croydonathletic.com/fixtures-results/\",\n          \"isBranded\": false,\n          \"isNew\": false\n        },\n        {\n          \"keyword\": \"preston kedwell\",\n          \"rank\": 4,\n          \"searchVolume\": 90,\n          \"etv\": 5.93,\n          \"cpc\": 0,\n          \"difficulty\": 0,\n          \"intent\": \"commercial\",\n          \"url\": \"https://www.croydonathletic.com/preston-kedwell-joins-on-loan/\",\n          \"isBranded\": false,\n          \"isNew\": false\n        },\n        {\n          \"keyword\": \"the mayfield stadium\",\n          \"rank\": 4,\n          \"searchVolume\": 50,\n          \"etv\": 3.3,\n          \"cpc\": 0,\n          \"difficulty\": 0,\n          \"intent\": \"informational\",\n          \"url\": \"https://www.croydonathletic.com/\",\n          \"isBranded\": false,\n          \"isNew\": true\n        }\n      ],\n      \"quickWinOpportunities\": [\n        {\n          \"keyword\": \"croydon football\",\n          \"rank\": 20,\n          \"searchVolume\": 2400,\n          \"etv\": 14.16,\n          \"cpc\": 1.2,\n          \"difficulty\": 0,\n          \"intent\": \"informational\",\n          \"url\": \"https://www.croydonathletic.com/\",\n          \"isBranded\": false,\n          \"isNew\": false\n        },\n        {\n          \"keyword\": \"charlie colkett\",\n          \"rank\": 11,\n          \"searchVolume\": 880,\n          \"etv\": 9.94,\n          \"cpc\": 0,\n          \"difficulty\": 0,\n          \"intent\": \"commercial\",\n          \"url\": \"https://www.croydonathletic.com/charlie-colkett-signs-for-croydon-athletic/\",\n          \"isBranded\": false,\n          \"isNew\": false\n        },\n        {\n          \"keyword\": \"nya kirby\",\n          \"rank\": 17,\n          \"searchVolume\": 590,\n          \"etv\": 4.43,\n          \"cpc\": 0,\n          \"difficulty\": 0,\n          \"intent\": \"commercial\",\n          \"url\": \"https://www.croydonathletic.com/player/nya-kirby/\",\n          \"isBranded\": false,\n          \"isNew\": false\n        },\n        {\n          \"keyword\": \"football teams croydon\",\n          \"rank\": 11,\n          \"searchVolume\": 320,\n          \"etv\": 4.8,\n          \"cpc\": 1.55,\n          \"difficulty\": 6,\n          \"intent\": \"informational\",\n          \"url\": \"https://www.croydonathletic.com/\",\n          \"isBranded\": false,\n          \"isNew\": false\n        },\n        {\n          \"keyword\": \"football team in croydon\",\n          \"rank\": 14,\n          \"searchVolume\": 320,\n          \"etv\": 6.3,\n          \"cpc\": 1.55,\n          \"difficulty\": 1,\n          \"intent\": \"informational\",\n          \"url\": \"https://www.croydonathletic.com/\",\n          \"isBranded\": false,\n          \"isNew\": false\n        },\n        {\n          \"keyword\": \"mayfield stadium\",\n          \"rank\": 14,\n          \"searchVolume\": 140,\n          \"etv\": 1.58,\n          \"cpc\": 0,\n          \"difficulty\": 0,\n          \"intent\": \"informational\",\n          \"url\": \"https://www.croydonathletic.com/\",\n          \"isBranded\": false,\n          \"isNew\": false\n        },\n        {\n          \"keyword\": \"cian mccarthy\",\n          \"rank\": 15,\n          \"searchVolume\": 110,\n          \"etv\": 0.82,\n          \"cpc\": 0,\n          \"difficulty\": 0,\n          \"intent\": \"informational\",\n          \"url\": \"https://www.croydonathletic.com/player/cian-mccarthy/\",\n          \"isBranded\": false,\n          \"isNew\": false\n        },\n        {\n          \"keyword\": \"jermaine mcglashan\",\n          \"rank\": 19,\n          \"searchVolume\": 110,\n          \"etv\": 0.47,\n          \"cpc\": 0,\n          \"difficulty\": 0,\n          \"intent\": \"informational\",\n          \"url\": \"https://www.croydonathletic.com/jermaine-mcglashan-steps-down-as-manager/\",\n          \"isBranded\": false,\n          \"isNew\": false\n        },\n        {\n          \"keyword\": \"croydon football academy\",\n          \"rank\": 17,\n          \"searchVolume\": 90,\n          \"etv\": 0.5,\n          \"cpc\": 1.72,\n          \"difficulty\": 0,\n          \"intent\": \"navigational\",\n          \"url\": \"https://www.croydonathletic.com/\",\n          \"isBranded\": false,\n          \"isNew\": false\n        },\n        {\n          \"keyword\": \"ibby akanbi\",\n          \"rank\": 13,\n          \"searchVolume\": 70,\n          \"etv\": 0.64,\n          \"cpc\": 0,\n          \"difficulty\": 0,\n          \"intent\": \"transactional\",\n          \"url\": \"https://www.croydonathletic.com/club-news-new-signing-ibby-akanbi-joins-the-rams/\",\n          \"isBranded\": false,\n          \"isNew\": false\n        }\n      ],\n      \"allKeywords\": [\n        {\n          \"keyword\": \"afc croydon athletic\",\n          \"rank\": 1,\n          \"searchVolume\": 4400,\n          \"etv\": 1337.6,\n          \"cpc\": 1.2,\n          \"difficulty\": 3,\n          \"intent\": \"navigational\",\n          \"url\": \"https://www.croydonathletic.com/\",\n          \"isBranded\": false,\n          \"isNew\": false\n        },\n        {\n          \"keyword\": \"croydon athletic\",\n          \"rank\": 1,\n          \"searchVolume\": 4400,\n          \"etv\": 1337.6,\n          \"cpc\": 1.2,\n          \"difficulty\": 8,\n          \"intent\": \"navigational\",\n          \"url\": \"https://www.croydonathletic.com/\",\n          \"isBranded\": false,\n          \"isNew\": false\n        },\n        {\n          \"keyword\": \"croydon athletic fc\",\n          \"rank\": 1,\n          \"searchVolume\": 320,\n          \"etv\": 97.28,\n          \"cpc\": 0,\n          \"difficulty\": 1,\n          \"intent\": \"navigational\",\n          \"url\": \"https://www.croydonathletic.com/\",\n          \"isBranded\": false,\n          \"isNew\": false\n        },\n        {\n          \"keyword\": \"afc croydon\",\n          \"rank\": 2,\n          \"searchVolume\": 4400,\n          \"etv\": 712.8,\n          \"cpc\": 1.2,\n          \"difficulty\": 0,\n          \"intent\": \"informational\",\n          \"url\": \"https://www.croydonathletic.com/\",\n          \"isBranded\": false,\n          \"isNew\": false\n        },\n        {\n          \"keyword\": \"croydon athletic football club\",\n          \"rank\": 2,\n          \"searchVolume\": 320,\n          \"etv\": 51.84,\n          \"cpc\": 0,\n          \"difficulty\": 2,\n          \"intent\": \"navigational\",\n          \"url\": \"https://www.croydonathletic.com/\",\n          \"isBranded\": false,\n          \"isNew\": false\n        },\n        {\n          \"keyword\": \"croydon athletics\",\n          \"rank\": 2,\n          \"searchVolume\": 210,\n          \"etv\": 34.02,\n          \"cpc\": 0,\n          \"difficulty\": 13,\n          \"intent\": \"navigational\",\n          \"url\": \"https://www.croydonathletic.com/\",\n          \"isBranded\": false,\n          \"isNew\": false\n        },\n        {\n          \"keyword\": \"afc croydon athletic twitter\",\n          \"rank\": 4,\n          \"searchVolume\": 90,\n          \"etv\": 8.76,\n          \"cpc\": 0,\n          \"difficulty\": 5,\n          \"intent\": \"navigational\",\n          \"url\": \"https://www.croydonathletic.com/\",\n          \"isBranded\": false,\n          \"isNew\": false\n        },\n        {\n          \"keyword\": \"croydon football club fixtures\",\n          \"rank\": 4,\n          \"searchVolume\": 140,\n          \"etv\": 9.23,\n          \"cpc\": 0,\n          \"difficulty\": 0,\n          \"intent\": \"informational\",\n          \"url\": \"https://www.croydonathletic.com/fixtures-results/\",\n          \"isBranded\": false,\n          \"isNew\": false\n        },\n        {\n          \"keyword\": \"preston kedwell\",\n          \"rank\": 4,\n          \"searchVolume\": 90,\n          \"etv\": 5.93,\n          \"cpc\": 0,\n          \"difficulty\": 0,\n          \"intent\": \"commercial\",\n          \"url\": \"https://www.croydonathletic.com/preston-kedwell-joins-on-loan/\",\n          \"isBranded\": false,\n          \"isNew\": false\n        },\n        {\n          \"keyword\": \"the mayfield stadium\",\n          \"rank\": 4,\n          \"searchVolume\": 50,\n          \"etv\": 3.3,\n          \"cpc\": 0,\n          \"difficulty\": 0,\n          \"intent\": \"informational\",\n          \"url\": \"https://www.croydonathletic.com/\",\n          \"isBranded\": false,\n          \"isNew\": true\n        },\n        {\n          \"keyword\": \"croydon athletics academy\",\n          \"rank\": 5,\n          \"searchVolume\": 110,\n          \"etv\": 5.16,\n          \"cpc\": 0,\n          \"difficulty\": 0,\n          \"intent\": \"navigational\",\n          \"url\": \"https://www.croydonathletic.com/\",\n          \"isBranded\": false,\n          \"isNew\": false\n        },\n        {\n          \"keyword\": \"croydon fc fixtures\",\n          \"rank\": 5,\n          \"searchVolume\": 140,\n          \"etv\": 9.23,\n          \"cpc\": 0,\n          \"difficulty\": 0,\n          \"intent\": \"informational\",\n          \"url\": \"https://www.croydonathletic.com/fixtures-results/\",\n          \"isBranded\": false,\n          \"isNew\": false\n        },\n        {\n          \"keyword\": \"josh bayliss football\",\n          \"rank\": 5,\n          \"searchVolume\": 50,\n          \"etv\": 2.35,\n          \"cpc\": 0,\n          \"difficulty\": 0,\n          \"intent\": \"informational\",\n          \"url\": \"https://www.croydonathletic.com/club-news-new-signing-josh-bayliss-joins-the-rams/\",\n          \"isBranded\": false,\n          \"isNew\": true\n        },\n        {\n          \"keyword\": \"harvey kedwell\",\n          \"rank\": 6,\n          \"searchVolume\": 170,\n          \"etv\": 7.97,\n          \"cpc\": 0,\n          \"difficulty\": 0,\n          \"intent\": \"commercial\",\n          \"url\": \"https://www.croydonathletic.com/harvey-kedwell-signs-for-croydon-athletic/\",\n          \"isBranded\": false,\n          \"isNew\": false\n        },\n        {\n          \"keyword\": \"cr7 6dn\",\n          \"rank\": 8,\n          \"searchVolume\": 880,\n          \"etv\": 17.34,\n          \"cpc\": 0.75,\n          \"difficulty\": 0,\n          \"intent\": \"transactional\",\n          \"url\": \"https://www.croydonathletic.com/how-to-find-us/\",\n          \"isBranded\": false,\n          \"isNew\": true\n        },\n        {\n          \"keyword\": \"croydon fc twitter\",\n          \"rank\": 8,\n          \"searchVolume\": 390,\n          \"etv\": 9.98,\n          \"cpc\": 0,\n          \"difficulty\": 7,\n          \"intent\": \"informational\",\n          \"url\": \"https://www.croydonathletic.com/\",\n          \"isBranded\": false,\n          \"isNew\": false\n        },\n        {\n          \"keyword\": \"croydon women's fc\",\n          \"rank\": 8,\n          \"searchVolume\": 70,\n          \"etv\": 1.79,\n          \"cpc\": 0,\n          \"difficulty\": 0,\n          \"intent\": \"informational\",\n          \"url\": \"https://www.croydonathletic.com/womens/fixtures-results/\",\n          \"isBranded\": false,\n          \"isNew\": false\n        },\n        {\n          \"keyword\": \"keith millen\",\n          \"rank\": 9,\n          \"searchVolume\": 260,\n          \"etv\": 12.19,\n          \"cpc\": 0,\n          \"difficulty\": 0,\n          \"intent\": \"commercial\",\n          \"url\": \"https://www.croydonathletic.com/croydon-athletic-appoint-former-crystal-palace-coach-keith-millen-as-new-manager/\",\n          \"isBranded\": false,\n          \"isNew\": false\n        },\n        {\n          \"keyword\": \"1878 stadium\",\n          \"rank\": 10,\n          \"searchVolume\": 90,\n          \"etv\": 1.77,\n          \"cpc\": 0,\n          \"difficulty\": 0,\n          \"intent\": \"commercial\",\n          \"url\": \"https://www.croydonathletic.com/venue/the-1878-stadium-burnham-3g-pitch-installation/\",\n          \"isBranded\": false,\n          \"isNew\": false\n        },\n        {\n          \"keyword\": \"brandon pierrick\",\n          \"rank\": 10,\n          \"searchVolume\": 320,\n          \"etv\": 8.19,\n          \"cpc\": 0,\n          \"difficulty\": 0,\n          \"intent\": \"informational\",\n          \"url\": \"https://www.croydonathletic.com/player/brandon-pierrick/\",\n          \"isBranded\": false,\n          \"isNew\": true\n        },\n        {\n          \"keyword\": \"football clubs croydon\",\n          \"rank\": 10,\n          \"searchVolume\": 320,\n          \"etv\": 15.01,\n          \"cpc\": 1.55,\n          \"difficulty\": 23,\n          \"intent\": \"informational\",\n          \"url\": \"https://www.croydonathletic.com/\",\n          \"isBranded\": false,\n          \"isNew\": false\n        },\n        {\n          \"keyword\": \"the 1878 stadium\",\n          \"rank\": 10,\n          \"searchVolume\": 70,\n          \"etv\": 1.38,\n          \"cpc\": 0,\n          \"difficulty\": 0,\n          \"intent\": \"commercial\",\n          \"url\": \"https://www.croydonathletic.com/venue/the-1878-stadium-burnham-3g-pitch-installation/\",\n          \"isBranded\": false,\n          \"isNew\": true\n        },\n        {\n          \"keyword\": \"who does john nellis support\",\n          \"rank\": 10,\n          \"searchVolume\": 50,\n          \"etv\": 1.69,\n          \"cpc\": 0,\n          \"difficulty\": 0,\n          \"intent\": \"transactional\",\n          \"url\": \"https://www.croydonathletic.com/john-nellis-champions-afc-croydon-athletic-the-path-to-100k-subscribers-2/\",\n          \"isBranded\": false,\n          \"isNew\": false\n        },\n        {\n          \"keyword\": \"charlie colkett\",\n          \"rank\": 11,\n          \"searchVolume\": 880,\n          \"etv\": 9.94,\n          \"cpc\": 0,\n          \"difficulty\": 0,\n          \"intent\": \"commercial\",\n          \"url\": \"https://www.croydonathletic.com/charlie-colkett-signs-for-croydon-athletic/\",\n          \"isBranded\": false,\n          \"isNew\": false\n        },\n        {\n          \"keyword\": \"football teams croydon\",\n          \"rank\": 11,\n          \"searchVolume\": 320,\n          \"etv\": 4.8,\n          \"cpc\": 1.55,\n          \"difficulty\": 6,\n          \"intent\": \"informational\",\n          \"url\": \"https://www.croydonathletic.com/\",\n          \"isBranded\": false,\n          \"isNew\": false\n        },\n        {\n          \"keyword\": \"ibby akanbi\",\n          \"rank\": 13,\n          \"searchVolume\": 70,\n          \"etv\": 0.64,\n          \"cpc\": 0,\n          \"difficulty\": 0,\n          \"intent\": \"transactional\",\n          \"url\": \"https://www.croydonathletic.com/club-news-new-signing-ibby-akanbi-joins-the-rams/\",\n          \"isBranded\": false,\n          \"isNew\": false\n        },\n        {\n          \"keyword\": \"football team in croydon\",\n          \"rank\": 14,\n          \"searchVolume\": 320,\n          \"etv\": 6.3,\n          \"cpc\": 1.55,\n          \"difficulty\": 1,\n          \"intent\": \"informational\",\n          \"url\": \"https://www.croydonathletic.com/\",\n          \"isBranded\": false,\n          \"isNew\": false\n        },\n        {\n          \"keyword\": \"mayfield stadium\",\n          \"rank\": 14,\n          \"searchVolume\": 140,\n          \"etv\": 1.58,\n          \"cpc\": 0,\n          \"difficulty\": 0,\n          \"intent\": \"informational\",\n          \"url\": \"https://www.croydonathletic.com/\",\n          \"isBranded\": false,\n          \"isNew\": false\n        },\n        {\n          \"keyword\": \"cian mccarthy\",\n          \"rank\": 15,\n          \"searchVolume\": 110,\n          \"etv\": 0.82,\n          \"cpc\": 0,\n          \"difficulty\": 0,\n          \"intent\": \"informational\",\n          \"url\": \"https://www.croydonathletic.com/player/cian-mccarthy/\",\n          \"isBranded\": false,\n          \"isNew\": false\n        },\n        {\n          \"keyword\": \"croydon football academy\",\n          \"rank\": 17,\n          \"searchVolume\": 90,\n          \"etv\": 0.5,\n          \"cpc\": 1.72,\n          \"difficulty\": 0,\n          \"intent\": \"navigational\",\n          \"url\": \"https://www.croydonathletic.com/\",\n          \"isBranded\": false,\n          \"isNew\": false\n        },\n        {\n          \"keyword\": \"nya kirby\",\n          \"rank\": 17,\n          \"searchVolume\": 590,\n          \"etv\": 4.43,\n          \"cpc\": 0,\n          \"difficulty\": 0,\n          \"intent\": \"commercial\",\n          \"url\": \"https://www.croydonathletic.com/player/nya-kirby/\",\n          \"isBranded\": false,\n          \"isNew\": false\n        },\n        {\n          \"keyword\": \"what football team does john nellis support\",\n          \"rank\": 17,\n          \"searchVolume\": 50,\n          \"etv\": 0.25,\n          \"cpc\": 0,\n          \"difficulty\": 4,\n          \"intent\": \"commercial\",\n          \"url\": \"https://www.croydonathletic.com/john-nellis-champions-afc-croydon-athletic-the-path-to-100k-subscribers-2/\",\n          \"isBranded\": false,\n          \"isNew\": false\n        },\n        {\n          \"keyword\": \"croydon postal ground\",\n          \"rank\": 18,\n          \"searchVolume\": 70,\n          \"etv\": 0.3,\n          \"cpc\": 0.51,\n          \"difficulty\": 0,\n          \"intent\": \"informational\",\n          \"url\": \"https://www.croydonathletic.com/\",\n          \"isBranded\": false,\n          \"isNew\": false\n        },\n        {\n          \"keyword\": \"jermaine mcglashan\",\n          \"rank\": 19,\n          \"searchVolume\": 110,\n          \"etv\": 0.47,\n          \"cpc\": 0,\n          \"difficulty\": 0,\n          \"intent\": \"informational\",\n          \"url\": \"https://www.croydonathletic.com/jermaine-mcglashan-steps-down-as-manager/\",\n          \"isBranded\": false,\n          \"isNew\": false\n        },\n        {\n          \"keyword\": \"croydon football\",\n          \"rank\": 20,\n          \"searchVolume\": 2400,\n          \"etv\": 14.16,\n          \"cpc\": 1.2,\n          \"difficulty\": 0,\n          \"intent\": \"informational\",\n          \"url\": \"https://www.croydonathletic.com/\",\n          \"isBranded\": false,\n          \"isNew\": false\n        },\n        {\n          \"keyword\": \"where is john nellis from\",\n          \"rank\": 21,\n          \"searchVolume\": 90,\n          \"etv\": 0.3,\n          \"cpc\": 0,\n          \"difficulty\": 0,\n          \"intent\": \"informational\",\n          \"url\": \"https://www.croydonathletic.com/john-nellis-champions-afc-croydon-athletic-the-path-to-100k-subscribers-2/\",\n          \"isBranded\": false,\n          \"isNew\": false\n        },\n        {\n          \"keyword\": \"football club croydon\",\n          \"rank\": 22,\n          \"searchVolume\": 320,\n          \"etv\": 1.63,\n          \"cpc\": 1.55,\n          \"difficulty\": 0,\n          \"intent\": \"navigational\",\n          \"url\": \"https://www.croydonathletic.com/\",\n          \"isBranded\": false,\n          \"isNew\": false\n        },\n        {\n          \"keyword\": \"croydon football club\",\n          \"rank\": 24,\n          \"searchVolume\": 2400,\n          \"etv\": 10.32,\n          \"cpc\": 1.2,\n          \"difficulty\": 0,\n          \"intent\": \"navigational\",\n          \"url\": \"https://www.croydonathletic.com/\",\n          \"isBranded\": false,\n          \"isNew\": false\n        },\n        {\n          \"keyword\": \"kadell daniel\",\n          \"rank\": 24,\n          \"searchVolume\": 210,\n          \"etv\": 0.69,\n          \"cpc\": 0,\n          \"difficulty\": 0,\n          \"intent\": \"informational\",\n          \"url\": \"https://www.croydonathletic.com/player/kadell-daniel/\",\n          \"isBranded\": false,\n          \"isNew\": true\n        },\n        {\n          \"keyword\": \"isthmian u18\",\n          \"rank\": 25,\n          \"searchVolume\": 170,\n          \"etv\": 0.39,\n          \"cpc\": 0,\n          \"difficulty\": 4,\n          \"intent\": \"transactional\",\n          \"url\": \"https://www.croydonathletic.com/league/isthmian-football-league-u18-east-divi/\",\n          \"isBranded\": false,\n          \"isNew\": true\n        },\n        {\n          \"keyword\": \"soul kader\",\n          \"rank\": 25,\n          \"searchVolume\": 170,\n          \"etv\": 0.56,\n          \"cpc\": 0,\n          \"difficulty\": 0,\n          \"intent\": \"commercial\",\n          \"url\": \"https://www.croydonathletic.com/croydon-athletic-secures-loan-signing-of-striker-soul-kader-from-bromley-fc/\",\n          \"isBranded\": false,\n          \"isNew\": false\n        },\n        {\n          \"keyword\": \"athletic team\",\n          \"rank\": 26,\n          \"searchVolume\": 90,\n          \"etv\": 0.21,\n          \"cpc\": 0,\n          \"difficulty\": 53,\n          \"intent\": \"navigational\",\n          \"url\": \"https://www.croydonathletic.com/\",\n          \"isBranded\": false,\n          \"isNew\": true\n        },\n        {\n          \"keyword\": \"cobham fc stadium\",\n          \"rank\": 26,\n          \"searchVolume\": 70,\n          \"etv\": 0.23,\n          \"cpc\": 0,\n          \"difficulty\": 0,\n          \"intent\": \"navigational\",\n          \"url\": \"https://www.croydonathletic.com/venue/cobham-fc/\",\n          \"isBranded\": false,\n          \"isNew\": false\n        },\n        {\n          \"keyword\": \"reg madgwick stadium\",\n          \"rank\": 26,\n          \"searchVolume\": 170,\n          \"etv\": 0.46,\n          \"cpc\": 0,\n          \"difficulty\": 0,\n          \"intent\": \"informational\",\n          \"url\": \"https://www.croydonathletic.com/venue/cobham-fc/\",\n          \"isBranded\": false,\n          \"isNew\": true\n        },\n        {\n          \"keyword\": \"ath football club\",\n          \"rank\": 27,\n          \"searchVolume\": 480,\n          \"etv\": 1.01,\n          \"cpc\": 0,\n          \"difficulty\": 68,\n          \"intent\": \"navigational\",\n          \"url\": \"https://www.croydonathletic.com/\",\n          \"isBranded\": false,\n          \"isNew\": false\n        },\n        {\n          \"keyword\": \"isthmian league u18\",\n          \"rank\": 27,\n          \"searchVolume\": 320,\n          \"etv\": 0.7,\n          \"cpc\": 0,\n          \"difficulty\": 2,\n          \"intent\": \"informational\",\n          \"url\": \"https://www.croydonathletic.com/league/isthmian-football-league-u18-east-divi/\",\n          \"isBranded\": false,\n          \"isNew\": true\n        },\n        {\n          \"keyword\": \"beckenham town fc twitter today\",\n          \"rank\": 28,\n          \"searchVolume\": 90,\n          \"etv\": 0.19,\n          \"cpc\": 0,\n          \"difficulty\": 10,\n          \"intent\": \"navigational\",\n          \"url\": \"https://www.croydonathletic.com/\",\n          \"isBranded\": false,\n          \"isNew\": true\n        },\n        {\n          \"keyword\": \"burnham fc stadium\",\n          \"rank\": 28,\n          \"searchVolume\": 90,\n          \"etv\": 0.19,\n          \"cpc\": 0,\n          \"difficulty\": 4,\n          \"intent\": \"informational\",\n          \"url\": \"https://www.croydonathletic.com/venue/the-1878-stadium-burnham-3g-pitch-installation/\",\n          \"isBranded\": false,\n          \"isNew\": false\n        },\n        {\n          \"keyword\": \"east preston fc\",\n          \"rank\": 28,\n          \"searchVolume\": 1000,\n          \"etv\": 2.1,\n          \"cpc\": 0.32,\n          \"difficulty\": 11,\n          \"intent\": \"navigational\",\n          \"url\": \"https://www.croydonathletic.com/team/east-preston-fc/\",\n          \"isBranded\": false,\n          \"isNew\": false\n        },\n        {\n          \"keyword\": \"barking to croydon\",\n          \"rank\": 29,\n          \"searchVolume\": 110,\n          \"etv\": 0.23,\n          \"cpc\": 0,\n          \"difficulty\": 0,\n          \"intent\": \"commercial\",\n          \"url\": \"https://www.croydonathletic.com/event/croydon-athletic-vs-barking/\",\n          \"isBranded\": false,\n          \"isNew\": false\n        }\n      ]\n    }\n  },\n  {\n    \"success\": true,\n    \"backlinks\": {\n      \"dateFrom\": \"N/A\",\n      \"dateTo\": \"N/A\",\n      \"dataPoints\": 0,\n      \"totalBacklinks\": 0,\n      \"referringDomains\": 0,\n      \"rank\": 0,\n      \"periodChanges\": {\n        \"backlinksChange\": 0,\n        \"domainsChange\": 0,\n        \"backlinksStart\": 0,\n        \"backlinksEnd\": 0,\n        \"domainsStart\": 0,\n        \"domainsEnd\": 0\n      }\n    }\n  }\n];\n\n// Return each item as a separate output item for the Aggregate Data node\nreturn testData.map(item => ({ json: item }));"
+      },
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        512,
+        2880
+      ],
+      "id": "053a6f81-26b2-4f46-8540-adf508549d7a",
+      "name": "Test Data1"
+    },
+    {
+      "parameters": {
+        "jsCode": "// Test Data Node - Mock API Responses for Testing\n// This node bypasses the API calls and provides test data directly to Aggregate Data node\n\nconst testData = [\n  {\n    \"success\": true,\n    \"status\": \"complete\",\n    \"onPage\": {\n      \"crawlProgress\": \"finished\",\n      \"pagesCrawled\": 0,\n      \"pagesInQueue\": 0,\n      \"issues\": {\n        \"critical\": 0,\n        \"warnings\": 0,\n        \"notices\": 0\n      },\n      \"pageMetrics\": {\n        \"brokenLinks\": 29,\n        \"brokenResources\": 0,\n        \"duplicateTitle\": 0,\n        \"duplicateDescription\": 0,\n        \"duplicateContent\": 18\n      },\n      \"performance\": {\n        \"avgPageLoadTime\": 0,\n        \"https\": 0,\n        \"mobileUsability\": false\n      }\n    }\n  },\n  {\n    \"success\": true,\n    \"domainRank\": {\n      \"target\": \"www.croydonathletic.com\",\n      \"location\": 2826,\n      \"language\": \"en\",\n      \"positions\": {\n        \"top3\": 7,\n        \"top10\": 27,\n        \"page2\": 15,\n        \"page3\": 16,\n        \"page4Plus\": 60\n      },\n      \"estimatedTrafficValue\": 3818,\n      \"totalKeywords\": 118,\n      \"estimatedPaidTrafficCost\": 4173.93,\n      \"movement\": {\n        \"newKeywords\": 37,\n        \"improved\": 22,\n        \"declined\": 49,\n        \"lost\": 40\n      }\n    }\n  },\n  {\n    \"success\": true,\n    \"keywords\": {\n      \"summary\": {\n        \"totalKeywords\": 118,\n        \"totalSearchVolume\": 57870,\n        \"totalETV\": 3818.05,\n        \"brandedCount\": 0,\n        \"unbrandedCount\": 118,\n        \"brandedPercent\": 0,\n        \"unbrandedPercent\": 100\n      },\n      \"distribution\": {\n        \"top3Count\": 6,\n        \"top10Count\": 23,\n        \"page2Count\": 12,\n        \"page3Count\": 18,\n        \"deepCount\": 65\n      },\n      \"topPerformers\": [\n        {\"keyword\": \"afc croydon athletic\", \"rank\": 1, \"searchVolume\": 4400, \"etv\": 1337.6, \"cpc\": 1.2, \"difficulty\": 3, \"intent\": \"navigational\", \"url\": \"https://www.croydonathletic.com/\", \"isBranded\": false, \"isNew\": false},\n        {\"keyword\": \"croydon athletic\", \"rank\": 1, \"searchVolume\": 4400, \"etv\": 1337.6, \"cpc\": 1.2, \"difficulty\": 8, \"intent\": \"navigational\", \"url\": \"https://www.croydonathletic.com/\", \"isBranded\": false, \"isNew\": false},\n        {\"keyword\": \"croydon athletic fc\", \"rank\": 1, \"searchVolume\": 320, \"etv\": 97.28, \"cpc\": 0, \"difficulty\": 1, \"intent\": \"navigational\", \"url\": \"https://www.croydonathletic.com/\", \"isBranded\": false, \"isNew\": false},\n        {\"keyword\": \"afc croydon\", \"rank\": 2, \"searchVolume\": 4400, \"etv\": 712.8, \"cpc\": 1.2, \"difficulty\": 0, \"intent\": \"informational\", \"url\": \"https://www.croydonathletic.com/\", \"isBranded\": false, \"isNew\": false},\n        {\"keyword\": \"croydon athletic football club\", \"rank\": 2, \"searchVolume\": 320, \"etv\": 51.84, \"cpc\": 0, \"difficulty\": 2, \"intent\": \"navigational\", \"url\": \"https://www.croydonathletic.com/\", \"isBranded\": false, \"isNew\": false},\n        {\"keyword\": \"croydon athletics\", \"rank\": 2, \"searchVolume\": 210, \"etv\": 34.02, \"cpc\": 0, \"difficulty\": 13, \"intent\": \"navigational\", \"url\": \"https://www.croydonathletic.com/\", \"isBranded\": false, \"isNew\": false},\n        {\"keyword\": \"afc croydon athletic twitter\", \"rank\": 4, \"searchVolume\": 90, \"etv\": 8.76, \"cpc\": 0, \"difficulty\": 5, \"intent\": \"navigational\", \"url\": \"https://www.croydonathletic.com/\", \"isBranded\": false, \"isNew\": false},\n        {\"keyword\": \"croydon football club fixtures\", \"rank\": 4, \"searchVolume\": 140, \"etv\": 9.23, \"cpc\": 0, \"difficulty\": 0, \"intent\": \"informational\", \"url\": \"https://www.croydonathletic.com/fixtures-results/\", \"isBranded\": false, \"isNew\": false},\n        {\"keyword\": \"preston kedwell\", \"rank\": 4, \"searchVolume\": 90, \"etv\": 5.93, \"cpc\": 0, \"difficulty\": 0, \"intent\": \"commercial\", \"url\": \"https://www.croydonathletic.com/preston-kedwell-joins-on-loan/\", \"isBranded\": false, \"isNew\": false},\n        {\"keyword\": \"the mayfield stadium\", \"rank\": 4, \"searchVolume\": 50, \"etv\": 3.3, \"cpc\": 0, \"difficulty\": 0, \"intent\": \"informational\", \"url\": \"https://www.croydonathletic.com/\", \"isBranded\": false, \"isNew\": true}\n      ],\n      \"quickWinOpportunities\": [\n        {\"keyword\": \"croydon football\", \"rank\": 20, \"searchVolume\": 2400, \"etv\": 14.16, \"cpc\": 1.2, \"difficulty\": 0, \"intent\": \"informational\", \"url\": \"https://www.croydonathletic.com/\", \"isBranded\": false, \"isNew\": false},\n        {\"keyword\": \"charlie colkett\", \"rank\": 11, \"searchVolume\": 880, \"etv\": 9.94, \"cpc\": 0, \"difficulty\": 0, \"intent\": \"commercial\", \"url\": \"https://www.croydonathletic.com/charlie-colkett-signs-for-croydon-athletic/\", \"isBranded\": false, \"isNew\": false},\n        {\"keyword\": \"nya kirby\", \"rank\": 17, \"searchVolume\": 590, \"etv\": 4.43, \"cpc\": 0, \"difficulty\": 0, \"intent\": \"commercial\", \"url\": \"https://www.croydonathletic.com/player/nya-kirby/\", \"isBranded\": false, \"isNew\": false},\n        {\"keyword\": \"football teams croydon\", \"rank\": 11, \"searchVolume\": 320, \"etv\": 4.8, \"cpc\": 1.55, \"difficulty\": 6, \"intent\": \"informational\", \"url\": \"https://www.croydonathletic.com/\", \"isBranded\": false, \"isNew\": false},\n        {\"keyword\": \"football team in croydon\", \"rank\": 14, \"searchVolume\": 320, \"etv\": 6.3, \"cpc\": 1.55, \"difficulty\": 1, \"intent\": \"informational\", \"url\": \"https://www.croydonathletic.com/\", \"isBranded\": false, \"isNew\": false},\n        {\"keyword\": \"mayfield stadium\", \"rank\": 14, \"searchVolume\": 140, \"etv\": 1.58, \"cpc\": 0, \"difficulty\": 0, \"intent\": \"informational\", \"url\": \"https://www.croydonathletic.com/\", \"isBranded\": false, \"isNew\": false},\n        {\"keyword\": \"cian mccarthy\", \"rank\": 15, \"searchVolume\": 110, \"etv\": 0.82, \"cpc\": 0, \"difficulty\": 0, \"intent\": \"informational\", \"url\": \"https://www.croydonathletic.com/player/cian-mccarthy/\", \"isBranded\": false, \"isNew\": false},\n        {\"keyword\": \"jermaine mcglashan\", \"rank\": 19, \"searchVolume\": 110, \"etv\": 0.47, \"cpc\": 0, \"difficulty\": 0, \"intent\": \"informational\", \"url\": \"https://www.croydonathletic.com/jermaine-mcglashan-steps-down-as-manager/\", \"isBranded\": false, \"isNew\": false},\n        {\"keyword\": \"croydon football academy\", \"rank\": 17, \"searchVolume\": 90, \"etv\": 0.5, \"cpc\": 1.72, \"difficulty\": 0, \"intent\": \"navigational\", \"url\": \"https://www.croydonathletic.com/\", \"isBranded\": false, \"isNew\": false},\n        {\"keyword\": \"ibby akanbi\", \"rank\": 13, \"searchVolume\": 70, \"etv\": 0.64, \"cpc\": 0, \"difficulty\": 0, \"intent\": \"transactional\", \"url\": \"https://www.croydonathletic.com/club-news-new-signing-ibby-akanbi-joins-the-rams/\", \"isBranded\": false, \"isNew\": false}\n      ],\n      \"allKeywords\": [\n        {\"keyword\": \"afc croydon athletic\", \"rank\": 1, \"searchVolume\": 4400, \"etv\": 1337.6, \"cpc\": 1.2, \"difficulty\": 3, \"intent\": \"navigational\", \"url\": \"https://www.croydonathletic.com/\", \"isBranded\": false, \"isNew\": false},\n        {\"keyword\": \"croydon athletic\", \"rank\": 1, \"searchVolume\": 4400, \"etv\": 1337.6, \"cpc\": 1.2, \"difficulty\": 8, \"intent\": \"navigational\", \"url\": \"https://www.croydonathletic.com/\", \"isBranded\": false, \"isNew\": false},\n        {\"keyword\": \"croydon athletic fc\", \"rank\": 1, \"searchVolume\": 320, \"etv\": 97.28, \"cpc\": 0, \"difficulty\": 1, \"intent\": \"navigational\", \"url\": \"https://www.croydonathletic.com/\", \"isBranded\": false, \"isNew\": false},\n        {\"keyword\": \"afc croydon\", \"rank\": 2, \"searchVolume\": 4400, \"etv\": 712.8, \"cpc\": 1.2, \"difficulty\": 0, \"intent\": \"informational\", \"url\": \"https://www.croydonathletic.com/\", \"isBranded\": false, \"isNew\": false},\n        {\"keyword\": \"croydon athletic football club\", \"rank\": 2, \"searchVolume\": 320, \"etv\": 51.84, \"cpc\": 0, \"difficulty\": 2, \"intent\": \"navigational\", \"url\": \"https://www.croydonathletic.com/\", \"isBranded\": false, \"isNew\": false},\n        {\"keyword\": \"croydon athletics\", \"rank\": 2, \"searchVolume\": 210, \"etv\": 34.02, \"cpc\": 0, \"difficulty\": 13, \"intent\": \"navigational\", \"url\": \"https://www.croydonathletic.com/\", \"isBranded\": false, \"isNew\": false},\n        {\"keyword\": \"afc croydon athletic twitter\", \"rank\": 4, \"searchVolume\": 90, \"etv\": 8.76, \"cpc\": 0, \"difficulty\": 5, \"intent\": \"navigational\", \"url\": \"https://www.croydonathletic.com/\", \"isBranded\": false, \"isNew\": false},\n        {\"keyword\": \"croydon football club fixtures\", \"rank\": 4, \"searchVolume\": 140, \"etv\": 9.23, \"cpc\": 0, \"difficulty\": 0, \"intent\": \"informational\", \"url\": \"https://www.croydonathletic.com/fixtures-results/\", \"isBranded\": false, \"isNew\": false},\n        {\"keyword\": \"preston kedwell\", \"rank\": 4, \"searchVolume\": 90, \"etv\": 5.93, \"cpc\": 0, \"difficulty\": 0, \"intent\": \"commercial\", \"url\": \"https://www.croydonathletic.com/preston-kedwell-joins-on-loan/\", \"isBranded\": false, \"isNew\": false},\n        {\"keyword\": \"the mayfield stadium\", \"rank\": 4, \"searchVolume\": 50, \"etv\": 3.3, \"cpc\": 0, \"difficulty\": 0, \"intent\": \"informational\", \"url\": \"https://www.croydonathletic.com/\", \"isBranded\": false, \"isNew\": true},\n        {\"keyword\": \"croydon athletics academy\", \"rank\": 5, \"searchVolume\": 110, \"etv\": 5.16, \"cpc\": 0, \"difficulty\": 0, \"intent\": \"navigational\", \"url\": \"https://www.croydonathletic.com/\", \"isBranded\": false, \"isNew\": false},\n        {\"keyword\": \"croydon fc fixtures\", \"rank\": 5, \"searchVolume\": 140, \"etv\": 9.23, \"cpc\": 0, \"difficulty\": 0, \"intent\": \"informational\", \"url\": \"https://www.croydonathletic.com/fixtures-results/\", \"isBranded\": false, \"isNew\": false},\n        {\"keyword\": \"josh bayliss football\", \"rank\": 5, \"searchVolume\": 50, \"etv\": 2.35, \"cpc\": 0, \"difficulty\": 0, \"intent\": \"informational\", \"url\": \"https://www.croydonathletic.com/club-news-new-signing-josh-bayliss-joins-the-rams/\", \"isBranded\": false, \"isNew\": true},\n        {\"keyword\": \"harvey kedwell\", \"rank\": 6, \"searchVolume\": 170, \"etv\": 7.97, \"cpc\": 0, \"difficulty\": 0, \"intent\": \"commercial\", \"url\": \"https://www.croydonathletic.com/harvey-kedwell-signs-for-croydon-athletic/\", \"isBranded\": false, \"isNew\": false},\n        {\"keyword\": \"cr7 6dn\", \"rank\": 8, \"searchVolume\": 880, \"etv\": 17.34, \"cpc\": 0.75, \"difficulty\": 0, \"intent\": \"transactional\", \"url\": \"https://www.croydonathletic.com/how-to-find-us/\", \"isBranded\": false, \"isNew\": true},\n        {\"keyword\": \"croydon fc twitter\", \"rank\": 8, \"searchVolume\": 390, \"etv\": 9.98, \"cpc\": 0, \"difficulty\": 7, \"intent\": \"informational\", \"url\": \"https://www.croydonathletic.com/\", \"isBranded\": false, \"isNew\": false},\n        {\"keyword\": \"croydon women's fc\", \"rank\": 8, \"searchVolume\": 70, \"etv\": 1.79, \"cpc\": 0, \"difficulty\": 0, \"intent\": \"informational\", \"url\": \"https://www.croydonathletic.com/womens/fixtures-results/\", \"isBranded\": false, \"isNew\": false},\n        {\"keyword\": \"keith millen\", \"rank\": 9, \"searchVolume\": 260, \"etv\": 12.19, \"cpc\": 0, \"difficulty\": 0, \"intent\": \"commercial\", \"url\": \"https://www.croydonathletic.com/croydon-athletic-appoint-former-crystal-palace-coach-keith-millen-as-new-manager/\", \"isBranded\": false, \"isNew\": false},\n        {\"keyword\": \"1878 stadium\", \"rank\": 10, \"searchVolume\": 90, \"etv\": 1.77, \"cpc\": 0, \"difficulty\": 0, \"intent\": \"commercial\", \"url\": \"https://www.croydonathletic.com/venue/the-1878-stadium-burnham-3g-pitch-installation/\", \"isBranded\": false, \"isNew\": false},\n        {\"keyword\": \"brandon pierrick\", \"rank\": 10, \"searchVolume\": 320, \"etv\": 8.19, \"cpc\": 0, \"difficulty\": 0, \"intent\": \"informational\", \"url\": \"https://www.croydonathletic.com/player/brandon-pierrick/\", \"isBranded\": false, \"isNew\": true},\n        {\"keyword\": \"football clubs croydon\", \"rank\": 10, \"searchVolume\": 320, \"etv\": 15.01, \"cpc\": 1.55, \"difficulty\": 23, \"intent\": \"informational\", \"url\": \"https://www.croydonathletic.com/\", \"isBranded\": false, \"isNew\": false},\n        {\"keyword\": \"the 1878 stadium\", \"rank\": 10, \"searchVolume\": 70, \"etv\": 1.38, \"cpc\": 0, \"difficulty\": 0, \"intent\": \"commercial\", \"url\": \"https://www.croydonathletic.com/venue/the-1878-stadium-burnham-3g-pitch-installation/\", \"isBranded\": false, \"isNew\": true},\n        {\"keyword\": \"who does john nellis support\", \"rank\": 10, \"searchVolume\": 50, \"etv\": 1.69, \"cpc\": 0, \"difficulty\": 0, \"intent\": \"transactional\", \"url\": \"https://www.croydonathletic.com/john-nellis-champions-afc-croydon-athletic-the-path-to-100k-subscribers-2/\", \"isBranded\": false, \"isNew\": false},\n        {\"keyword\": \"charlie colkett\", \"rank\": 11, \"searchVolume\": 880, \"etv\": 9.94, \"cpc\": 0, \"difficulty\": 0, \"intent\": \"commercial\", \"url\": \"https://www.croydonathletic.com/charlie-colkett-signs-for-croydon-athletic/\", \"isBranded\": false, \"isNew\": false},\n        {\"keyword\": \"football teams croydon\", \"rank\": 11, \"searchVolume\": 320, \"etv\": 4.8, \"cpc\": 1.55, \"difficulty\": 6, \"intent\": \"informational\", \"url\": \"https://www.croydonathletic.com/\", \"isBranded\": false, \"isNew\": false},\n        {\"keyword\": \"croydon football\", \"rank\": 20, \"searchVolume\": 2400, \"etv\": 14.16, \"cpc\": 1.2, \"difficulty\": 0, \"intent\": \"informational\", \"url\": \"https://www.croydonathletic.com/\", \"isBranded\": false, \"isNew\": false}\n      ]\n    }\n  },\n  {\n    \"success\": true,\n    \"backlinks\": {\n      \"totalBacklinks\": 145,\n      \"referringDomains\": 53,\n      \"referringMainDomains\": 45,\n      \"referringIPs\": 46,\n      \"dofollow\": 0,\n      \"nofollow\": 0,\n      \"rank\": 142,\n      \"brokenBacklinks\": 140,\n      \"dofollowPercent\": 0\n    }\n  }\n];\n\n// Return each item as a separate output item for the Aggregate Data node\nreturn testData.map(item => ({ json: item }));"
+      },
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        720,
+        464
+      ],
+      "id": "e04efb8e-9529-425c-8a9f-7cd93d4f9d98",
+      "name": "Test Complete Data"
+    },
+    {
+      "parameters": {
+        "jsCode": "// Test Data Node - Mock API Responses for Testing (Zeroed Values)\n// This node bypasses the API calls and provides test data directly to Aggregate Data node\n\nconst testData = [\n  {\n    \"success\": true,\n    \"status\": \"complete\",\n    \"onPage\": {\n      \"crawlProgress\": \"finished\",\n      \"pagesCrawled\": 0,\n      \"pagesInQueue\": 0,\n      \"issues\": {\n        \"critical\": 0,\n        \"warnings\": 0,\n        \"notices\": 0\n      },\n      \"pageMetrics\": {\n        \"brokenLinks\": 0,\n        \"brokenResources\": 0,\n        \"duplicateTitle\": 0,\n        \"duplicateDescription\": 0,\n        \"duplicateContent\": 0\n      },\n      \"performance\": {\n        \"avgPageLoadTime\": 0,\n        \"https\": 0,\n        \"mobileUsability\": false\n      }\n    }\n  },\n  {\n    \"success\": true,\n    \"domainRank\": {\n      \"target\": null,\n      \"location\": 0,\n      \"language\": null,\n      \"positions\": {\n        \"top3\": 0,\n        \"top10\": 0,\n        \"page2\": 0,\n        \"page3\": 0,\n        \"page4Plus\": 0\n      },\n      \"estimatedTrafficValue\": 0,\n      \"totalKeywords\": 0,\n      \"estimatedPaidTrafficCost\": 0,\n      \"movement\": {\n        \"newKeywords\": 0,\n        \"improved\": 0,\n        \"declined\": 0,\n        \"lost\": 0\n      }\n    }\n  },\n  {\n    \"success\": true,\n    \"keywords\": {\n      \"summary\": {\n        \"totalKeywords\": 0,\n        \"totalSearchVolume\": 0,\n        \"totalETV\": 0,\n        \"brandedCount\": 0,\n        \"unbrandedCount\": 0,\n        \"brandedPercent\": 0,\n        \"unbrandedPercent\": 0\n      },\n      \"distribution\": {\n        \"top3Count\": 0,\n        \"top10Count\": 0,\n        \"page2Count\": 0,\n        \"page3Count\": 0,\n        \"deepCount\": 0\n      },\n      \"topPerformers\": [],\n      \"quickWinOpportunities\": [],\n      \"allKeywords\": []\n    }\n  },\n  {\n    \"success\": true,\n    \"backlinks\": {\n      \"totalBacklinks\": 0,\n      \"referringDomains\": 0,\n      \"referringMainDomains\": 0,\n      \"referringIPs\": 0,\n      \"dofollow\": 0,\n      \"nofollow\": 0,\n      \"rank\": 0,\n      \"brokenBacklinks\": 0,\n      \"dofollowPercent\": 0\n    }\n  }\n];\n\n// Return each item as a separate output item for the Aggregate Data node\nreturn testData.map(item => ({ json: item }));"
+      },
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        720,
+        160
+      ],
+      "id": "634bdaf8-1d6d-471d-a199-7a1a9cd27372",
+      "name": "Test Empty Data"
+    },
+    {
+      "parameters": {
+        "fromEmail": "automation@programmx.com",
+        "toEmail": "={{ $(\"Validate Input\").first().json.email }}",
+        "subject": "=={{ $json.subject }}",
+        "html": "=<!DOCTYPE html>\n<html>\n<head>\n  <style>\n    body { font-family: Arial, sans-serif; line-height: 1.6; color: #333; }\n    .container { max-width: 600px; margin: 0 auto; padding: 20px; }\n    .header { background: #dc3545; color: white; padding: 30px; text-align: center; }\n    .content { background: #f8f9fa; padding: 30px; }\n    .error-box { background: #fff3cd; border-left: 4px solid #ffc107; padding: 15px; margin: 20px 0; }\n  </style>\n</head>\n<body>\n  <div class=\"container\">\n    <div class=\"header\">\n      <h1>⚠️ SEO Report Generation Failed</h1>\n    </div>\n    <div class=\"content\">\n      <p>Hello,</p>\n      <p>We encountered an issue while generating your SEO report for <strong>{{ $json.targetUrl }}</strong>.</p>\n      \n      <div class=\"error-box\">\n        <h3>Error Details</h3>\n        <p><strong>Error:</strong> {{ $json.errorType }}</p>\n        <p><strong>Message:</strong> {{ $json.message }}</p>\n        <p><strong>Data Sources:</strong> {{ $json.dataSourceCount }}/{{ $json.totalSources }} available</p>\n      </div>\n      \n      <h3>Data Source Status</h3>\n      <ul>\n        <li>OnPage: {{ $json.checks.onPage }}</li>\n        <li>Domain Rank: {{ $json.checks.domainRank }}</li>\n        <li>Keywords: {{ $json.checks.keywords }}</li>\n        <li>Backlinks: {{ $json.checks.backlinks }}</li>\n      </ul>\n          \n      <p>Best regards,<br>SEO Automation System</p>\n    </div>\n  </div>\n</body>\n</html>",
+        "options": {}
+      },
+      "type": "n8n-nodes-base.emailSend",
+      "typeVersion": 2.1,
+      "position": [
+        2928,
+        -16
+      ],
+      "id": "7e24c9c2-3ad7-4f34-bd60-82d8a4bfa728",
+      "name": "Send Error",
+      "webhookId": "8cc4bd9c-86ee-4316-9d5d-009ddd4195b4",
+      "credentials": {
+        "smtp": {
+          "id": "Powsux0m0r1TlNbw",
+          "name": "SMTP account 2"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "conditions": {
+          "options": {
+            "caseSensitive": true,
+            "leftValue": "",
+            "typeValidation": "strict",
+            "version": 3
+          },
+          "conditions": [
+            {
+              "id": "8bd1d091-90d6-4a68-a853-a5b9f1731717",
+              "leftValue": "={{ $json.hasValidData }}",
+              "rightValue": "true",
+              "operator": {
+                "type": "boolean",
+                "operation": "true",
+                "singleValue": true
+              }
+            }
+          ],
+          "combinator": "and"
+        },
+        "options": {}
+      },
+      "type": "n8n-nodes-base.if",
+      "typeVersion": 2.3,
+      "position": [
+        1872,
+        -240
+      ],
+      "id": "5decea1b-f3a2-4376-aad3-9a62b0a4a6c5",
+      "name": "Check Data"
+    },
+    {
+      "parameters": {
+        "jsCode": "// Format Error Message for Email\nconst validation = $('Validate Data').first().json;\nconst aggregatedData = validation.aggregatedData;\n\n// Get email from original input\nconst validateInput = $('Validate Input').first().json || $('Validate Input1').first().json;\nconst email = validateInput.email || 'admin@yourdomain.com';\n\nreturn {\n  toEmail: email,\n  subject: `⚠️ SEO Report Generation Failed - ${aggregatedData.metadata?.targetUrl || 'Unknown'}`,\n  errorType: 'Insufficient Data',\n  message: validation.validationMessage,\n  dataSourceCount: validation.dataSourceCount,\n  totalSources: validation.totalSources,\n  checks: {\n    onPage: validation.checks.onPage ? '✅ Available' : '❌ Empty/Zero',\n    domainRank: validation.checks.domainRank ? '✅ Available' : '❌ Empty/Zero',\n    keywords: validation.checks.keywords ? '✅ Available' : '❌ Empty/Zero',\n    backlinks: validation.checks.backlinks ? '✅ Available' : '❌ Empty/Zero'\n  },\n  targetUrl: aggregatedData.metadata?.targetUrl || 'Unknown',\n  reportType: aggregatedData.metadata?.reportType || 'unknown',\n  timestamp: new Date().toISOString()\n};"
+      },
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        2080,
+        -16
+      ],
+      "id": "b2df415f-3f93-4c6f-a38e-1b1056b37aeb",
+      "name": "Format Error"
+    },
+    {
+      "parameters": {
+        "jsCode": "// Validate Data - Check if we have meaningful data (not all zeros/null/empty)\nconst input = $input.first().json;\n\n// ✅ FIX: Extract aggregatedData - Handle both direct data and nested structure\nconst data = input.aggregatedData || input;\n\n// Check OnPage - Look for ANY meaningful data\nconst hasOnPage = data.onPage?.success && (\n  (data.onPage.onPage?.pagesCrawled > 0) ||\n  (data.onPage.onPage?.issues?.critical > 0) ||\n  (data.onPage.onPage?.issues?.warnings > 0) ||\n  (data.onPage.onPage?.issues?.notices > 0) ||\n  (data.onPage.onPage?.pageMetrics?.brokenLinks > 0) ||\n  (data.onPage.onPage?.pageMetrics?.brokenResources > 0) ||\n  (data.onPage.onPage?.pageMetrics?.duplicateTitle > 0) ||\n  (data.onPage.onPage?.pageMetrics?.duplicateDescription > 0) ||\n  (data.onPage.onPage?.pageMetrics?.duplicateContent > 0) ||\n  (data.onPage.onPage?.performance?.avgPageLoadTime > 0) ||\n  (data.onPage.onPage?.performance?.mobileUsability === true) ||\n  (data.onPage.onPage?.crawlProgress && data.onPage.onPage.crawlProgress !== '')\n);\n\n// Check Domain Rank - Look for ANY meaningful data\nconst hasDomainRank = data.domainRank?.success && (\n  (data.domainRank.domainRank?.totalKeywords > 0) ||\n  (data.domainRank.domainRank?.estimatedTrafficValue > 0) ||\n  (data.domainRank.domainRank?.estimatedPaidTrafficCost > 0) ||\n  (data.domainRank.domainRank?.positions?.top3 > 0) ||\n  (data.domainRank.domainRank?.positions?.top10 > 0) ||\n  (data.domainRank.domainRank?.positions?.page2 > 0) ||\n  (data.domainRank.domainRank?.positions?.page3 > 0) ||\n  (data.domainRank.domainRank?.positions?.page4Plus > 0) ||\n  (data.domainRank.domainRank?.movement?.newKeywords > 0) ||\n  (data.domainRank.domainRank?.movement?.improved > 0) ||\n  (data.domainRank.domainRank?.target && data.domainRank.domainRank.target !== '')\n);\n\n// Check Keywords - Look for ANY meaningful data\nconst hasKeywords = data.keywords?.success && (\n  (data.keywords.keywords?.summary?.totalKeywords > 0) ||\n  (data.keywords.keywords?.summary?.totalSearchVolume > 0) ||\n  (data.keywords.keywords?.summary?.totalETV > 0) ||\n  (data.keywords.keywords?.distribution?.top3Count > 0) ||\n  (data.keywords.keywords?.distribution?.top10Count > 0) ||\n  (data.keywords.keywords?.topPerformers?.length > 0) ||\n  (data.keywords.keywords?.quickWinOpportunities?.length > 0) ||\n  (data.keywords.keywords?.allKeywords?.length > 0)\n);\n\n// Check Backlinks - Look for ANY meaningful data\nconst hasBacklinks = data.backlinks?.success && (\n  (data.backlinks.backlinks?.totalBacklinks > 0) ||\n  (data.backlinks.backlinks?.referringDomains > 0) ||\n  (data.backlinks.backlinks?.referringMainDomains > 0) ||\n  (data.backlinks.backlinks?.dofollow > 0) ||\n  (data.backlinks.backlinks?.nofollow > 0) ||\n  (data.backlinks.backlinks?.rank > 0)\n);\n\n// Count valid data sources\nconst dataCount = [hasOnPage, hasDomainRank, hasKeywords, hasBacklinks].filter(Boolean).length;\n\n// Require at least 2 out of 4 data sources to be valid\nconst hasValidData = dataCount >= 2;\n\nreturn {\n  hasValidData: hasValidData,\n  dataCount: dataCount,\n  totalSources: 4,\n  checks: {\n    onPage: hasOnPage,\n    domainRank: hasDomainRank,\n    keywords: hasKeywords,\n    backlinks: hasBacklinks\n  },\n  aggregatedData: data,\n  validationMessage: hasValidData \n    ? `Valid: ${dataCount}/4 data sources available`\n    : `Invalid: Only ${dataCount}/4 data sources available (all zeros/null/empty)`\n};"
+      },
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        1728,
+        -240
+      ],
+      "id": "13624757-4d04-446f-86b2-73d8e222d6a6",
+      "name": "Validate Data"
+    },
+    {
+      "parameters": {
+        "conditions": {
+          "options": {
+            "caseSensitive": true,
+            "leftValue": "",
+            "typeValidation": "strict",
+            "version": 3
+          },
+          "conditions": [
+            {
+              "id": "c2c5ab95-7cdd-4716-aecf-e430cefcadd3",
+              "leftValue": "={{ $json.allEndpointsHaveSubscriptionError }}",
+              "rightValue": "",
+              "operator": {
+                "type": "boolean",
+                "operation": "true",
+                "singleValue": true
+              }
+            },
+            {
+              "id": "a9f6ae26-3f17-4ead-9039-d11b96f2e229",
+              "leftValue": "",
+              "rightValue": "",
+              "operator": {
+                "type": "string",
+                "operation": "equals",
+                "name": "filter.operator.equals"
+              }
+            }
+          ],
+          "combinator": "and"
+        },
+        "options": {}
+      },
+      "type": "n8n-nodes-base.if",
+      "typeVersion": 2.3,
+      "position": [
+        1568,
+        -256
+      ],
+      "id": "687f0bd9-7ca8-47d6-8e4b-21ab9c297219",
+      "name": "If1"
+    },
+    {
+      "parameters": {
+        "jsCode": "// Check if ALL endpoints returned subscription errors (status_code 40204)\nconst aggregatedData = $input.first().json;\n\n// Helper to check if a data source has subscription error\nfunction hasSubscriptionError(dataSource) {\n  if (!dataSource) return false;\n  \n  // ✅ FIX: Check for explicit status_code 40204\n  if (dataSource.status_code === 40204) {\n    return true;\n  }\n  \n  // ✅ FIX: Check if success is 40204 (parse nodes set this when subscription error occurs)\n  if (dataSource.success === 40204) {\n    return true;\n  }\n  \n  // ✅ FIX: Check for success: false with subscription error message\n  if (dataSource.success === false) {\n    const errorMsg = (dataSource.error || dataSource.message || '').toLowerCase();\n    if (errorMsg.includes('subscription') || \n        errorMsg.includes('40204') ||\n        errorMsg.includes('requires subscription activation')) {\n      return true;\n    }\n  }\n  \n  return false;\n}\n\n// Check each data source\nconst subscriptionErrors = {\n  onPage: hasSubscriptionError(aggregatedData.onPage),\n  domainRank: hasSubscriptionError(aggregatedData.domainRank),\n  keywords: hasSubscriptionError(aggregatedData.keywords),\n  backlinks: hasSubscriptionError(aggregatedData.backlinks)\n};\n\n// Count errors\nconst errorCount = Object.values(subscriptionErrors).filter(Boolean).length;\nconst allHaveSubscriptionError = errorCount === 4;\n\nreturn {\n  allEndpointsHaveSubscriptionError: allHaveSubscriptionError,\n  subscriptionErrorCount: errorCount,\n  subscriptionErrors: subscriptionErrors,\n  aggregatedData: aggregatedData,\n  message: allHaveSubscriptionError\n    ? 'ALL endpoints returned subscription errors (40204)'\n    : `${errorCount}/4 endpoints have subscription errors`\n};"
+      },
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        1392,
+        -256
+      ],
+      "id": "f5afc773-bc5e-4fdd-8110-b365247ff303",
+      "name": "Check Subscription"
+    },
+    {
+      "parameters": {
+        "jsCode": "// Format Subscription Error for Email\nconst subscriptionCheck = $('Check Subscription').first().json;\nconst aggregatedData = subscriptionCheck.aggregatedData;\n\n// Get email from original input\nconst validateInput = $('Validate Input').first().json;\nconst email = validateInput.email || 'admin@yourdomain.com';\n\nreturn {\n  toEmail: email,\n  subject: `🔔 URGENT: All API Subscriptions Missing - SEO Report Cannot Generate`,\n  errorType: 'All Subscriptions Missing',\n  message: 'All required API subscriptions are missing or expired.',\n  subscriptionStatus: {\n    onPage: subscriptionCheck.subscriptionErrors.onPage ? '❌ Missing' : '✅ Active',\n    domainRank: subscriptionCheck.subscriptionErrors.domainRank ? '❌ Missing' : '✅ Active',\n    keywords: subscriptionCheck.subscriptionErrors.keywords ? '❌ Missing' : '✅ Active',\n    backlinks: subscriptionCheck.subscriptionErrors.backlinks ? '❌ Missing' : '✅ Active'\n  },\n  subscriptionUrls: {\n    onPage: 'https://app.dataforseo.com/on-page-subscription',\n    dataforseoLabs: 'https://app.dataforseo.com/dataforseo-labs-subscription',\n    backlinks: 'https://app.dataforseo.com/backlinks-subscription'\n  },\n  targetUrl: aggregatedData.metadata?.targetUrl || 'Unknown',\n  timestamp: new Date().toISOString()\n};"
+      },
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        1744,
+        -448
+      ],
+      "id": "32069a40-dbc0-4a9c-afe1-3c7ffdcad697",
+      "name": "Format Subscription Error"
+    },
+    {
+      "parameters": {
+        "fromEmail": "automation@programmx.com",
+        "toEmail": "={{ $(\"Validate Input\").first().json.email }}",
+        "subject": "=={{ $json.subject }}",
+        "html": "=<!DOCTYPE html>\n<html>\n<head>\n  <style>\n    body { font-family: Arial, sans-serif; line-height: 1.6; color: #333; }\n    .container { max-width: 600px; margin: 0 auto; padding: 20px; }\n    .header { background: #dc3545; color: white; padding: 30px; text-align: center; }\n    .content { background: #f8f9fa; padding: 30px; }\n    .urgent { background: #f8d7da; border-left: 4px solid #dc3545; padding: 15px; margin: 20px 0; }\n  </style>\n</head>\n<body>\n  <div class=\"container\">\n    <div class=\"header\">\n      <h1>🔔 URGENT: All API Subscriptions Missing</h1>\n    </div>\n    <div class=\"content\">\n      <p>Hello,</p>\n      \n      <div class=\"urgent\">\n        <h3>⚠️ Critical Issue</h3>\n        <p><strong>All required API subscriptions are missing or expired.</strong></p>\n        <p>Your SEO report cannot be generated until subscriptions are activated.</p>\n      </div>\n      \n      <h3>Subscription Status</h3>\n      <ul>\n        <li>OnPage API: {{ $json.subscriptionStatus.onPage }}</li>\n        <li>DataForSEO Labs API: {{ $json.subscriptionStatus.domainRank }}</li>\n        <li>Backlinks API: {{ $json.subscriptionStatus.backlinks }}</li>\n      </ul>\n      \n      <h3>Required Actions</h3>\n      <ol>\n        <li>Go to: <a href=\"https://app.dataforseo.com/\">DataForSEO Dashboard</a></li>\n        <li>Activate OnPage: <a href=\"{{ $json.subscriptionUrls.onPage }}\">Activate</a></li>\n        <li>Activate Labs: <a href=\"{{ $json.subscriptionUrls.dataforseoLabs }}\">Activate</a></li>\n        <li>Activate Backlinks: <a href=\"{{ $json.subscriptionUrls.backlinks }}\">Activate</a></li>\n        <li>Wait 2-3 minutes, then try again</li>\n      </ol>\n      \n      <p>Best regards,<br>SEO Automation System</p>\n    </div>\n  </div>\n</body>\n</html>",
+        "options": {}
+      },
+      "type": "n8n-nodes-base.emailSend",
+      "typeVersion": 2.1,
+      "position": [
+        2928,
+        -448
+      ],
+      "id": "0389820e-8870-4b86-b78f-4a599ff4ae98",
+      "name": "Send Subscription Error",
+      "webhookId": "8cc4bd9c-86ee-4316-9d5d-009ddd4195b4",
+      "credentials": {
+        "smtp": {
+          "id": "Powsux0m0r1TlNbw",
+          "name": "SMTP account 2"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "jsCode": "// Test Data Node - Mock API Responses for Testing (Zeroed Values)\n// This node bypasses the API calls and provides test data directly to Aggregate Data node\n\nconst testData = [\n  {\n    \"success\": 40204,\n    \"status\": \"complete\",\n    \"onPage\": {\n      \"crawlProgress\": \"finished\",\n      \"pagesCrawled\": 0,\n      \"pagesInQueue\": 0,\n      \"issues\": {\n        \"critical\": 0,\n        \"warnings\": 0,\n        \"notices\": 0\n      },\n      \"pageMetrics\": {\n        \"brokenLinks\": 0,\n        \"brokenResources\": 0,\n        \"duplicateTitle\": 0,\n        \"duplicateDescription\": 0,\n        \"duplicateContent\": 0\n      },\n      \"performance\": {\n        \"avgPageLoadTime\": 0,\n        \"https\": 0,\n        \"mobileUsability\": false\n      }\n    }\n  },\n  {\n    \"success\": 40204,\n    \"domainRank\": {\n      \"target\": null,\n      \"location\": 0,\n      \"language\": null,\n      \"positions\": {\n        \"top3\": 0,\n        \"top10\": 0,\n        \"page2\": 0,\n        \"page3\": 0,\n        \"page4Plus\": 0\n      },\n      \"estimatedTrafficValue\": 0,\n      \"totalKeywords\": 0,\n      \"estimatedPaidTrafficCost\": 0,\n      \"movement\": {\n        \"newKeywords\": 0,\n        \"improved\": 0,\n        \"declined\": 0,\n        \"lost\": 0\n      }\n    }\n  },\n  {\n    \"success\": 40204,\n    \"keywords\": {\n      \"summary\": {\n        \"totalKeywords\": 0,\n        \"totalSearchVolume\": 0,\n        \"totalETV\": 0,\n        \"brandedCount\": 0,\n        \"unbrandedCount\": 0,\n        \"brandedPercent\": 0,\n        \"unbrandedPercent\": 0\n      },\n      \"distribution\": {\n        \"top3Count\": 0,\n        \"top10Count\": 0,\n        \"page2Count\": 0,\n        \"page3Count\": 0,\n        \"deepCount\": 0\n      },\n      \"topPerformers\": [],\n      \"quickWinOpportunities\": [],\n      \"allKeywords\": []\n    }\n  },\n  {\n    \"success\": 40204,\n    \"backlinks\": {\n      \"totalBacklinks\": 0,\n      \"referringDomains\": 0,\n      \"referringMainDomains\": 0,\n      \"referringIPs\": 0,\n      \"dofollow\": 0,\n      \"nofollow\": 0,\n      \"rank\": 0,\n      \"brokenBacklinks\": 0,\n      \"dofollowPercent\": 0\n    }\n  }\n];\n\n// Return each item as a separate output item for the Aggregate Data node\nreturn testData.map(item => ({ json: item }));"
+      },
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        720,
+        320
+      ],
+      "id": "7ea85781-b4c2-4311-a7b7-dc2d435b0bb3",
+      "name": "Test Subscription Error Data"
+    },
+    {
+      "parameters": {
+        "jsCode": "// Check if ALL endpoints returned subscription errors (status_code 40204)\nconst aggregatedData = $input.first().json;\n\n// Helper to check if a data source has subscription error\nfunction hasSubscriptionError(dataSource) {\n  if (!dataSource) return false;\n  \n  // ✅ FIX: Check for explicit status_code 40204\n  if (dataSource.status_code === 40204) {\n    return true;\n  }\n  \n  // ✅ FIX: Check if success is 40204 (parse nodes set this when subscription error occurs)\n  if (dataSource.success === 40204) {\n    return true;\n  }\n  \n  // ✅ FIX: Check for success: false with subscription error message\n  if (dataSource.success === false) {\n    const errorMsg = (dataSource.error || dataSource.message || '').toLowerCase();\n    if (errorMsg.includes('subscription') || \n        errorMsg.includes('40204') ||\n        errorMsg.includes('requires subscription activation')) {\n      return true;\n    }\n  }\n  \n  return false;\n}\n\n// Check each data source\nconst subscriptionErrors = {\n  onPage: hasSubscriptionError(aggregatedData.onPage),\n  domainRank: hasSubscriptionError(aggregatedData.domainRank),\n  keywords: hasSubscriptionError(aggregatedData.keywords),\n  backlinks: hasSubscriptionError(aggregatedData.backlinks)\n};\n\n// Count errors\nconst errorCount = Object.values(subscriptionErrors).filter(Boolean).length;\nconst allHaveSubscriptionError = errorCount === 4;\n\nreturn {\n  allEndpointsHaveSubscriptionError: allHaveSubscriptionError,\n  subscriptionErrorCount: errorCount,\n  subscriptionErrors: subscriptionErrors,\n  aggregatedData: aggregatedData,\n  message: allHaveSubscriptionError\n    ? 'ALL endpoints returned subscription errors (40204)'\n    : `${errorCount}/4 endpoints have subscription errors`\n};"
+      },
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        1312,
+        1408
+      ],
+      "id": "044e8307-a1b9-46f1-8642-5f736feb3e0f",
+      "name": "Check Subscription2"
+    },
+    {
+      "parameters": {
+        "conditions": {
+          "options": {
+            "caseSensitive": true,
+            "leftValue": "",
+            "typeValidation": "strict",
+            "version": 3
+          },
+          "conditions": [
+            {
+              "id": "c2c5ab95-7cdd-4716-aecf-e430cefcadd3",
+              "leftValue": "={{ $json.allEndpointsHaveSubscriptionError }}",
+              "rightValue": "",
+              "operator": {
+                "type": "boolean",
+                "operation": "true",
+                "singleValue": true
+              }
+            },
+            {
+              "id": "a9f6ae26-3f17-4ead-9039-d11b96f2e229",
+              "leftValue": "",
+              "rightValue": "",
+              "operator": {
+                "type": "string",
+                "operation": "equals",
+                "name": "filter.operator.equals"
+              }
+            }
+          ],
+          "combinator": "and"
+        },
+        "options": {}
+      },
+      "type": "n8n-nodes-base.if",
+      "typeVersion": 2.3,
+      "position": [
+        1472,
+        1408
+      ],
+      "id": "ac9208bf-efbd-4d50-9af5-7d3ba2c6bf52",
+      "name": "If2"
+    },
+    {
+      "parameters": {
+        "jsCode": "// Format Subscription Error for Email\nconst subscriptionCheck = $('Check Subscription2').first().json;\nconst aggregatedData = subscriptionCheck.aggregatedData;\n\n// Get email from original input\nconst validateInput = $('Validate Input1').first().json;\nconst email = validateInput.email || 'admin@yourdomain.com';\n\nreturn {\n  toEmail: email,\n  subject: `🔔 URGENT: All API Subscriptions Missing - SEO Report Cannot Generate`,\n  errorType: 'All Subscriptions Missing',\n  message: 'All required API subscriptions are missing or expired.',\n  subscriptionStatus: {\n    onPage: subscriptionCheck.subscriptionErrors.onPage ? '❌ Missing' : '✅ Active',\n    domainRank: subscriptionCheck.subscriptionErrors.domainRank ? '❌ Missing' : '✅ Active',\n    keywords: subscriptionCheck.subscriptionErrors.keywords ? '❌ Missing' : '✅ Active',\n    backlinks: subscriptionCheck.subscriptionErrors.backlinks ? '❌ Missing' : '✅ Active'\n  },\n  subscriptionUrls: {\n    onPage: 'https://app.dataforseo.com/on-page-subscription',\n    dataforseoLabs: 'https://app.dataforseo.com/dataforseo-labs-subscription',\n    backlinks: 'https://app.dataforseo.com/backlinks-subscription'\n  },\n  targetUrl: aggregatedData.metadata?.targetUrl || 'Unknown',\n  timestamp: new Date().toISOString()\n};"
+      },
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        1808,
+        1184
+      ],
+      "id": "88854b55-3837-4858-9015-34e90adc5a3b",
+      "name": "Format Subscription Error1"
+    },
+    {
+      "parameters": {
+        "fromEmail": "automation@programmx.com",
+        "toEmail": "={{ $(\"Validate Input1\").first().json.email }}",
+        "subject": "=={{ $json.subject }}",
+        "html": "=<!DOCTYPE html>\n<html>\n<head>\n  <style>\n    body { font-family: Arial, sans-serif; line-height: 1.6; color: #333; }\n    .container { max-width: 600px; margin: 0 auto; padding: 20px; }\n    .header { background: #dc3545; color: white; padding: 30px; text-align: center; }\n    .content { background: #f8f9fa; padding: 30px; }\n    .urgent { background: #f8d7da; border-left: 4px solid #dc3545; padding: 15px; margin: 20px 0; }\n  </style>\n</head>\n<body>\n  <div class=\"container\">\n    <div class=\"header\">\n      <h1>🔔 URGENT: All API Subscriptions Missing</h1>\n    </div>\n    <div class=\"content\">\n      <p>Hello,</p>\n      \n      <div class=\"urgent\">\n        <h3>⚠️ Critical Issue</h3>\n        <p><strong>All required API subscriptions are missing or expired.</strong></p>\n        <p>Your SEO report cannot be generated until subscriptions are activated.</p>\n      </div>\n      \n      <h3>Subscription Status</h3>\n      <ul>\n        <li>OnPage API: {{ $json.subscriptionStatus.onPage }}</li>\n        <li>DataForSEO Labs API: {{ $json.subscriptionStatus.domainRank }}</li>\n        <li>Backlinks API: {{ $json.subscriptionStatus.backlinks }}</li>\n      </ul>\n      \n      <h3>Required Actions</h3>\n      <ol>\n        <li>Go to: <a href=\"https://app.dataforseo.com/\">DataForSEO Dashboard</a></li>\n        <li>Activate OnPage: <a href=\"{{ $json.subscriptionUrls.onPage }}\">Activate</a></li>\n        <li>Activate Labs: <a href=\"{{ $json.subscriptionUrls.dataforseoLabs }}\">Activate</a></li>\n        <li>Activate Backlinks: <a href=\"{{ $json.subscriptionUrls.backlinks }}\">Activate</a></li>\n        <li>Wait 2-3 minutes, then try again</li>\n      </ol>\n      \n      <p>Best regards,<br>SEO Automation System</p>\n    </div>\n  </div>\n</body>\n</html>",
+        "options": {}
+      },
+      "type": "n8n-nodes-base.emailSend",
+      "typeVersion": 2.1,
+      "position": [
+        3456,
+        1200
+      ],
+      "id": "683256c7-97d4-4173-8c4f-55c4bb5db511",
+      "name": "Send Subscription Error1",
+      "webhookId": "8cc4bd9c-86ee-4316-9d5d-009ddd4195b4",
+      "credentials": {
+        "smtp": {
+          "id": "Powsux0m0r1TlNbw",
+          "name": "SMTP account 2"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "conditions": {
+          "options": {
+            "caseSensitive": true,
+            "leftValue": "",
+            "typeValidation": "strict",
+            "version": 3
+          },
+          "conditions": [
+            {
+              "id": "8bd1d091-90d6-4a68-a853-a5b9f1731717",
+              "leftValue": "={{ $json.aggregatedData.hasValidData }}",
+              "rightValue": "true",
+              "operator": {
+                "type": "boolean",
+                "operation": "true",
+                "singleValue": true
+              }
+            }
+          ],
+          "combinator": "and"
+        },
+        "options": {}
+      },
+      "type": "n8n-nodes-base.if",
+      "typeVersion": 2.3,
+      "position": [
+        1632,
+        1424
+      ],
+      "id": "0a5cab9c-66e6-4a41-b0d0-126fda571b3f",
+      "name": "Check Data1"
+    },
+    {
+      "parameters": {
+        "fromEmail": "automation@programmx.com",
+        "toEmail": "={{ $(\"Validate Input1\").first().json.email }}",
+        "subject": "=={{ $json.subject }}",
+        "html": "=<!DOCTYPE html>\n<html>\n<head>\n  <style>\n    body { font-family: Arial, sans-serif; line-height: 1.6; color: #333; }\n    .container { max-width: 600px; margin: 0 auto; padding: 20px; }\n    .header { background: #dc3545; color: white; padding: 30px; text-align: center; }\n    .content { background: #f8f9fa; padding: 30px; }\n    .error-box { background: #fff3cd; border-left: 4px solid #ffc107; padding: 15px; margin: 20px 0; }\n  </style>\n</head>\n<body>\n  <div class=\"container\">\n    <div class=\"header\">\n      <h1>⚠️ SEO Report Generation Failed</h1>\n    </div>\n    <div class=\"content\">\n      <p>Hello,</p>\n      <p>We encountered an issue while generating your SEO report for <strong>{{ $json.targetUrl }}</strong>.</p>\n      \n      <div class=\"error-box\">\n        <h3>Error Details</h3>\n        <p><strong>Error:</strong> {{ $json.errorType }}</p>\n        <p><strong>Message:</strong> {{ $json.message }}</p>\n        <p><strong>Data Sources:</strong> {{ $json.dataSourceCount }}/{{ $json.totalSources }} available</p>\n      </div>\n      \n      <h3>Data Source Status</h3>\n      <ul>\n        <li>OnPage: {{ $json.checks.onPage }}</li>\n        <li>Domain Rank: {{ $json.checks.domainRank }}</li>\n        <li>Keywords: {{ $json.checks.keywords }}</li>\n        <li>Backlinks: {{ $json.checks.backlinks }}</li>\n      </ul>\n          \n      <p>Best regards,<br>SEO Automation System</p>\n    </div>\n  </div>\n</body>\n</html>",
+        "options": {}
+      },
+      "type": "n8n-nodes-base.emailSend",
+      "typeVersion": 2.1,
+      "position": [
+        3504,
+        2160
+      ],
+      "id": "9cdc70eb-3d3b-4056-a8d3-b7e5060c3dce",
+      "name": "Send Error1",
+      "webhookId": "8cc4bd9c-86ee-4316-9d5d-009ddd4195b4",
+      "credentials": {
+        "smtp": {
+          "id": "Powsux0m0r1TlNbw",
+          "name": "SMTP account 2"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "jsCode": "// Format Error Message for Email\nconst validation = $('Validate Data1').first().json;\nconst aggregatedData = validation.aggregatedData;\n\n// Get email from original input\nconst validateInput = $('Validate Input1').first().json || $('Validate Input1').first().json;\nconst email = validateInput.email || 'admin@yourdomain.com';\n\nreturn {\n  toEmail: email,\n  subject: `⚠️ SEO Report Generation Failed - ${aggregatedData.metadata?.targetUrl || 'Unknown'}`,\n  errorType: 'Insufficient Data',\n  message: validation.validationMessage,\n  dataSourceCount: validation.dataSourceCount,\n  totalSources: validation.totalSources,\n  checks: {\n    onPage: validation.checks.onPage ? '✅ Available' : '❌ Empty/Zero',\n    domainRank: validation.checks.domainRank ? '✅ Available' : '❌ Empty/Zero',\n    keywords: validation.checks.keywords ? '✅ Available' : '❌ Empty/Zero',\n    backlinks: validation.checks.backlinks ? '✅ Available' : '❌ Empty/Zero'\n  },\n  targetUrl: aggregatedData.metadata?.targetUrl || 'Unknown',\n  reportType: aggregatedData.metadata?.reportType || 'unknown',\n  timestamp: new Date().toISOString()\n};"
+      },
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        2064,
+        2176
+      ],
+      "id": "35cf4966-60b7-42b1-a95f-be9f46b019ef",
+      "name": "Format Error1"
+    },
+    {
+      "parameters": {
+        "jsCode": "// Test Data Node - Mock API Responses for Testing\n// This node bypasses the API calls and provides test data directly to Aggregate Data node\n\nconst testData = [\n  {\n    \"success\": true,\n    \"status\": \"complete\",\n    \"onPage\": {\n      \"crawlProgress\": \"finished\",\n      \"pagesCrawled\": 0,\n      \"pagesInQueue\": 0,\n      \"issues\": {\n        \"critical\": 0,\n        \"warnings\": 0,\n        \"notices\": 0\n      },\n      \"pageMetrics\": {\n        \"brokenLinks\": 29,\n        \"brokenResources\": 0,\n        \"duplicateTitle\": 0,\n        \"duplicateDescription\": 0,\n        \"duplicateContent\": 18\n      },\n      \"performance\": {\n        \"avgPageLoadTime\": 0,\n        \"https\": 0,\n        \"mobileUsability\": false\n      }\n    }\n  },\n  {\n    \"success\": true,\n    \"domainRank\": {\n      \"target\": \"www.croydonathletic.com\",\n      \"location\": 2826,\n      \"language\": \"en\",\n      \"positions\": {\n        \"top3\": 7,\n        \"top10\": 27,\n        \"page2\": 15,\n        \"page3\": 16,\n        \"page4Plus\": 60\n      },\n      \"estimatedTrafficValue\": 3818,\n      \"totalKeywords\": 118,\n      \"estimatedPaidTrafficCost\": 4173.93,\n      \"movement\": {\n        \"newKeywords\": 37,\n        \"improved\": 22,\n        \"declined\": 49,\n        \"lost\": 40\n      }\n    }\n  },\n  {\n    \"success\": true,\n    \"keywords\": {\n      \"summary\": {\n        \"totalKeywords\": 118,\n        \"totalSearchVolume\": 57870,\n        \"totalETV\": 3818.05,\n        \"brandedCount\": 0,\n        \"unbrandedCount\": 118,\n        \"brandedPercent\": 0,\n        \"unbrandedPercent\": 100\n      },\n      \"distribution\": {\n        \"top3Count\": 6,\n        \"top10Count\": 23,\n        \"page2Count\": 12,\n        \"page3Count\": 18,\n        \"deepCount\": 65\n      },\n      \"topPerformers\": [\n        {\"keyword\": \"afc croydon athletic\", \"rank\": 1, \"searchVolume\": 4400, \"etv\": 1337.6, \"cpc\": 1.2, \"difficulty\": 3, \"intent\": \"navigational\", \"url\": \"https://www.croydonathletic.com/\", \"isBranded\": false, \"isNew\": false},\n        {\"keyword\": \"croydon athletic\", \"rank\": 1, \"searchVolume\": 4400, \"etv\": 1337.6, \"cpc\": 1.2, \"difficulty\": 8, \"intent\": \"navigational\", \"url\": \"https://www.croydonathletic.com/\", \"isBranded\": false, \"isNew\": false},\n        {\"keyword\": \"croydon athletic fc\", \"rank\": 1, \"searchVolume\": 320, \"etv\": 97.28, \"cpc\": 0, \"difficulty\": 1, \"intent\": \"navigational\", \"url\": \"https://www.croydonathletic.com/\", \"isBranded\": false, \"isNew\": false},\n        {\"keyword\": \"afc croydon\", \"rank\": 2, \"searchVolume\": 4400, \"etv\": 712.8, \"cpc\": 1.2, \"difficulty\": 0, \"intent\": \"informational\", \"url\": \"https://www.croydonathletic.com/\", \"isBranded\": false, \"isNew\": false},\n        {\"keyword\": \"croydon athletic football club\", \"rank\": 2, \"searchVolume\": 320, \"etv\": 51.84, \"cpc\": 0, \"difficulty\": 2, \"intent\": \"navigational\", \"url\": \"https://www.croydonathletic.com/\", \"isBranded\": false, \"isNew\": false},\n        {\"keyword\": \"croydon athletics\", \"rank\": 2, \"searchVolume\": 210, \"etv\": 34.02, \"cpc\": 0, \"difficulty\": 13, \"intent\": \"navigational\", \"url\": \"https://www.croydonathletic.com/\", \"isBranded\": false, \"isNew\": false},\n        {\"keyword\": \"afc croydon athletic twitter\", \"rank\": 4, \"searchVolume\": 90, \"etv\": 8.76, \"cpc\": 0, \"difficulty\": 5, \"intent\": \"navigational\", \"url\": \"https://www.croydonathletic.com/\", \"isBranded\": false, \"isNew\": false},\n        {\"keyword\": \"croydon football club fixtures\", \"rank\": 4, \"searchVolume\": 140, \"etv\": 9.23, \"cpc\": 0, \"difficulty\": 0, \"intent\": \"informational\", \"url\": \"https://www.croydonathletic.com/fixtures-results/\", \"isBranded\": false, \"isNew\": false},\n        {\"keyword\": \"preston kedwell\", \"rank\": 4, \"searchVolume\": 90, \"etv\": 5.93, \"cpc\": 0, \"difficulty\": 0, \"intent\": \"commercial\", \"url\": \"https://www.croydonathletic.com/preston-kedwell-joins-on-loan/\", \"isBranded\": false, \"isNew\": false},\n        {\"keyword\": \"the mayfield stadium\", \"rank\": 4, \"searchVolume\": 50, \"etv\": 3.3, \"cpc\": 0, \"difficulty\": 0, \"intent\": \"informational\", \"url\": \"https://www.croydonathletic.com/\", \"isBranded\": false, \"isNew\": true}\n      ],\n      \"quickWinOpportunities\": [\n        {\"keyword\": \"croydon football\", \"rank\": 20, \"searchVolume\": 2400, \"etv\": 14.16, \"cpc\": 1.2, \"difficulty\": 0, \"intent\": \"informational\", \"url\": \"https://www.croydonathletic.com/\", \"isBranded\": false, \"isNew\": false},\n        {\"keyword\": \"charlie colkett\", \"rank\": 11, \"searchVolume\": 880, \"etv\": 9.94, \"cpc\": 0, \"difficulty\": 0, \"intent\": \"commercial\", \"url\": \"https://www.croydonathletic.com/charlie-colkett-signs-for-croydon-athletic/\", \"isBranded\": false, \"isNew\": false},\n        {\"keyword\": \"nya kirby\", \"rank\": 17, \"searchVolume\": 590, \"etv\": 4.43, \"cpc\": 0, \"difficulty\": 0, \"intent\": \"commercial\", \"url\": \"https://www.croydonathletic.com/player/nya-kirby/\", \"isBranded\": false, \"isNew\": false},\n        {\"keyword\": \"football teams croydon\", \"rank\": 11, \"searchVolume\": 320, \"etv\": 4.8, \"cpc\": 1.55, \"difficulty\": 6, \"intent\": \"informational\", \"url\": \"https://www.croydonathletic.com/\", \"isBranded\": false, \"isNew\": false},\n        {\"keyword\": \"football team in croydon\", \"rank\": 14, \"searchVolume\": 320, \"etv\": 6.3, \"cpc\": 1.55, \"difficulty\": 1, \"intent\": \"informational\", \"url\": \"https://www.croydonathletic.com/\", \"isBranded\": false, \"isNew\": false},\n        {\"keyword\": \"mayfield stadium\", \"rank\": 14, \"searchVolume\": 140, \"etv\": 1.58, \"cpc\": 0, \"difficulty\": 0, \"intent\": \"informational\", \"url\": \"https://www.croydonathletic.com/\", \"isBranded\": false, \"isNew\": false},\n        {\"keyword\": \"cian mccarthy\", \"rank\": 15, \"searchVolume\": 110, \"etv\": 0.82, \"cpc\": 0, \"difficulty\": 0, \"intent\": \"informational\", \"url\": \"https://www.croydonathletic.com/player/cian-mccarthy/\", \"isBranded\": false, \"isNew\": false},\n        {\"keyword\": \"jermaine mcglashan\", \"rank\": 19, \"searchVolume\": 110, \"etv\": 0.47, \"cpc\": 0, \"difficulty\": 0, \"intent\": \"informational\", \"url\": \"https://www.croydonathletic.com/jermaine-mcglashan-steps-down-as-manager/\", \"isBranded\": false, \"isNew\": false},\n        {\"keyword\": \"croydon football academy\", \"rank\": 17, \"searchVolume\": 90, \"etv\": 0.5, \"cpc\": 1.72, \"difficulty\": 0, \"intent\": \"navigational\", \"url\": \"https://www.croydonathletic.com/\", \"isBranded\": false, \"isNew\": false},\n        {\"keyword\": \"ibby akanbi\", \"rank\": 13, \"searchVolume\": 70, \"etv\": 0.64, \"cpc\": 0, \"difficulty\": 0, \"intent\": \"transactional\", \"url\": \"https://www.croydonathletic.com/club-news-new-signing-ibby-akanbi-joins-the-rams/\", \"isBranded\": false, \"isNew\": false}\n      ],\n      \"allKeywords\": [\n        {\"keyword\": \"afc croydon athletic\", \"rank\": 1, \"searchVolume\": 4400, \"etv\": 1337.6, \"cpc\": 1.2, \"difficulty\": 3, \"intent\": \"navigational\", \"url\": \"https://www.croydonathletic.com/\", \"isBranded\": false, \"isNew\": false},\n        {\"keyword\": \"croydon athletic\", \"rank\": 1, \"searchVolume\": 4400, \"etv\": 1337.6, \"cpc\": 1.2, \"difficulty\": 8, \"intent\": \"navigational\", \"url\": \"https://www.croydonathletic.com/\", \"isBranded\": false, \"isNew\": false},\n        {\"keyword\": \"croydon athletic fc\", \"rank\": 1, \"searchVolume\": 320, \"etv\": 97.28, \"cpc\": 0, \"difficulty\": 1, \"intent\": \"navigational\", \"url\": \"https://www.croydonathletic.com/\", \"isBranded\": false, \"isNew\": false},\n        {\"keyword\": \"afc croydon\", \"rank\": 2, \"searchVolume\": 4400, \"etv\": 712.8, \"cpc\": 1.2, \"difficulty\": 0, \"intent\": \"informational\", \"url\": \"https://www.croydonathletic.com/\", \"isBranded\": false, \"isNew\": false},\n        {\"keyword\": \"croydon athletic football club\", \"rank\": 2, \"searchVolume\": 320, \"etv\": 51.84, \"cpc\": 0, \"difficulty\": 2, \"intent\": \"navigational\", \"url\": \"https://www.croydonathletic.com/\", \"isBranded\": false, \"isNew\": false},\n        {\"keyword\": \"croydon athletics\", \"rank\": 2, \"searchVolume\": 210, \"etv\": 34.02, \"cpc\": 0, \"difficulty\": 13, \"intent\": \"navigational\", \"url\": \"https://www.croydonathletic.com/\", \"isBranded\": false, \"isNew\": false},\n        {\"keyword\": \"afc croydon athletic twitter\", \"rank\": 4, \"searchVolume\": 90, \"etv\": 8.76, \"cpc\": 0, \"difficulty\": 5, \"intent\": \"navigational\", \"url\": \"https://www.croydonathletic.com/\", \"isBranded\": false, \"isNew\": false},\n        {\"keyword\": \"croydon football club fixtures\", \"rank\": 4, \"searchVolume\": 140, \"etv\": 9.23, \"cpc\": 0, \"difficulty\": 0, \"intent\": \"informational\", \"url\": \"https://www.croydonathletic.com/fixtures-results/\", \"isBranded\": false, \"isNew\": false},\n        {\"keyword\": \"preston kedwell\", \"rank\": 4, \"searchVolume\": 90, \"etv\": 5.93, \"cpc\": 0, \"difficulty\": 0, \"intent\": \"commercial\", \"url\": \"https://www.croydonathletic.com/preston-kedwell-joins-on-loan/\", \"isBranded\": false, \"isNew\": false},\n        {\"keyword\": \"the mayfield stadium\", \"rank\": 4, \"searchVolume\": 50, \"etv\": 3.3, \"cpc\": 0, \"difficulty\": 0, \"intent\": \"informational\", \"url\": \"https://www.croydonathletic.com/\", \"isBranded\": false, \"isNew\": true},\n        {\"keyword\": \"croydon athletics academy\", \"rank\": 5, \"searchVolume\": 110, \"etv\": 5.16, \"cpc\": 0, \"difficulty\": 0, \"intent\": \"navigational\", \"url\": \"https://www.croydonathletic.com/\", \"isBranded\": false, \"isNew\": false},\n        {\"keyword\": \"croydon fc fixtures\", \"rank\": 5, \"searchVolume\": 140, \"etv\": 9.23, \"cpc\": 0, \"difficulty\": 0, \"intent\": \"informational\", \"url\": \"https://www.croydonathletic.com/fixtures-results/\", \"isBranded\": false, \"isNew\": false},\n        {\"keyword\": \"josh bayliss football\", \"rank\": 5, \"searchVolume\": 50, \"etv\": 2.35, \"cpc\": 0, \"difficulty\": 0, \"intent\": \"informational\", \"url\": \"https://www.croydonathletic.com/club-news-new-signing-josh-bayliss-joins-the-rams/\", \"isBranded\": false, \"isNew\": true},\n        {\"keyword\": \"harvey kedwell\", \"rank\": 6, \"searchVolume\": 170, \"etv\": 7.97, \"cpc\": 0, \"difficulty\": 0, \"intent\": \"commercial\", \"url\": \"https://www.croydonathletic.com/harvey-kedwell-signs-for-croydon-athletic/\", \"isBranded\": false, \"isNew\": false},\n        {\"keyword\": \"cr7 6dn\", \"rank\": 8, \"searchVolume\": 880, \"etv\": 17.34, \"cpc\": 0.75, \"difficulty\": 0, \"intent\": \"transactional\", \"url\": \"https://www.croydonathletic.com/how-to-find-us/\", \"isBranded\": false, \"isNew\": true},\n        {\"keyword\": \"croydon fc twitter\", \"rank\": 8, \"searchVolume\": 390, \"etv\": 9.98, \"cpc\": 0, \"difficulty\": 7, \"intent\": \"informational\", \"url\": \"https://www.croydonathletic.com/\", \"isBranded\": false, \"isNew\": false},\n        {\"keyword\": \"croydon women's fc\", \"rank\": 8, \"searchVolume\": 70, \"etv\": 1.79, \"cpc\": 0, \"difficulty\": 0, \"intent\": \"informational\", \"url\": \"https://www.croydonathletic.com/womens/fixtures-results/\", \"isBranded\": false, \"isNew\": false},\n        {\"keyword\": \"keith millen\", \"rank\": 9, \"searchVolume\": 260, \"etv\": 12.19, \"cpc\": 0, \"difficulty\": 0, \"intent\": \"commercial\", \"url\": \"https://www.croydonathletic.com/croydon-athletic-appoint-former-crystal-palace-coach-keith-millen-as-new-manager/\", \"isBranded\": false, \"isNew\": false},\n        {\"keyword\": \"1878 stadium\", \"rank\": 10, \"searchVolume\": 90, \"etv\": 1.77, \"cpc\": 0, \"difficulty\": 0, \"intent\": \"commercial\", \"url\": \"https://www.croydonathletic.com/venue/the-1878-stadium-burnham-3g-pitch-installation/\", \"isBranded\": false, \"isNew\": false},\n        {\"keyword\": \"brandon pierrick\", \"rank\": 10, \"searchVolume\": 320, \"etv\": 8.19, \"cpc\": 0, \"difficulty\": 0, \"intent\": \"informational\", \"url\": \"https://www.croydonathletic.com/player/brandon-pierrick/\", \"isBranded\": false, \"isNew\": true},\n        {\"keyword\": \"football clubs croydon\", \"rank\": 10, \"searchVolume\": 320, \"etv\": 15.01, \"cpc\": 1.55, \"difficulty\": 23, \"intent\": \"informational\", \"url\": \"https://www.croydonathletic.com/\", \"isBranded\": false, \"isNew\": false},\n        {\"keyword\": \"the 1878 stadium\", \"rank\": 10, \"searchVolume\": 70, \"etv\": 1.38, \"cpc\": 0, \"difficulty\": 0, \"intent\": \"commercial\", \"url\": \"https://www.croydonathletic.com/venue/the-1878-stadium-burnham-3g-pitch-installation/\", \"isBranded\": false, \"isNew\": true},\n        {\"keyword\": \"who does john nellis support\", \"rank\": 10, \"searchVolume\": 50, \"etv\": 1.69, \"cpc\": 0, \"difficulty\": 0, \"intent\": \"transactional\", \"url\": \"https://www.croydonathletic.com/john-nellis-champions-afc-croydon-athletic-the-path-to-100k-subscribers-2/\", \"isBranded\": false, \"isNew\": false},\n        {\"keyword\": \"charlie colkett\", \"rank\": 11, \"searchVolume\": 880, \"etv\": 9.94, \"cpc\": 0, \"difficulty\": 0, \"intent\": \"commercial\", \"url\": \"https://www.croydonathletic.com/charlie-colkett-signs-for-croydon-athletic/\", \"isBranded\": false, \"isNew\": false},\n        {\"keyword\": \"football teams croydon\", \"rank\": 11, \"searchVolume\": 320, \"etv\": 4.8, \"cpc\": 1.55, \"difficulty\": 6, \"intent\": \"informational\", \"url\": \"https://www.croydonathletic.com/\", \"isBranded\": false, \"isNew\": false},\n        {\"keyword\": \"croydon football\", \"rank\": 20, \"searchVolume\": 2400, \"etv\": 14.16, \"cpc\": 1.2, \"difficulty\": 0, \"intent\": \"informational\", \"url\": \"https://www.croydonathletic.com/\", \"isBranded\": false, \"isNew\": false}\n      ]\n    }\n  },\n  {\n    \"success\": true,\n    \"backlinks\": {\n      \"totalBacklinks\": 145,\n      \"referringDomains\": 53,\n      \"referringMainDomains\": 45,\n      \"referringIPs\": 46,\n      \"dofollow\": 0,\n      \"nofollow\": 0,\n      \"rank\": 142,\n      \"brokenBacklinks\": 140,\n      \"dofollowPercent\": 0\n    }\n  }\n];\n\n// Return each item as a separate output item for the Aggregate Data node\nreturn testData.map(item => ({ json: item }));"
+      },
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        816,
+        2128
+      ],
+      "id": "9c594488-2f0e-4a46-bc6c-5089e4058e3e",
+      "name": "Test Complete Data1"
+    },
+    {
+      "parameters": {
+        "jsCode": "// Test Data Node - Mock API Responses for Testing (Zeroed Values)\n// This node bypasses the API calls and provides test data directly to Aggregate Data node\n\nconst testData = [\n  {\n    \"success\": true,\n    \"status\": \"complete\",\n    \"onPage\": {\n      \"crawlProgress\": \"finished\",\n      \"pagesCrawled\": 0,\n      \"pagesInQueue\": 0,\n      \"issues\": {\n        \"critical\": 0,\n        \"warnings\": 0,\n        \"notices\": 0\n      },\n      \"pageMetrics\": {\n        \"brokenLinks\": 0,\n        \"brokenResources\": 0,\n        \"duplicateTitle\": 0,\n        \"duplicateDescription\": 0,\n        \"duplicateContent\": 0\n      },\n      \"performance\": {\n        \"avgPageLoadTime\": 0,\n        \"https\": 0,\n        \"mobileUsability\": false\n      }\n    }\n  },\n  {\n    \"success\": true,\n    \"domainRank\": {\n      \"target\": null,\n      \"location\": 0,\n      \"language\": null,\n      \"positions\": {\n        \"top3\": 0,\n        \"top10\": 0,\n        \"page2\": 0,\n        \"page3\": 0,\n        \"page4Plus\": 0\n      },\n      \"estimatedTrafficValue\": 0,\n      \"totalKeywords\": 0,\n      \"estimatedPaidTrafficCost\": 0,\n      \"movement\": {\n        \"newKeywords\": 0,\n        \"improved\": 0,\n        \"declined\": 0,\n        \"lost\": 0\n      }\n    }\n  },\n  {\n    \"success\": true,\n    \"keywords\": {\n      \"summary\": {\n        \"totalKeywords\": 0,\n        \"totalSearchVolume\": 0,\n        \"totalETV\": 0,\n        \"brandedCount\": 0,\n        \"unbrandedCount\": 0,\n        \"brandedPercent\": 0,\n        \"unbrandedPercent\": 0\n      },\n      \"distribution\": {\n        \"top3Count\": 0,\n        \"top10Count\": 0,\n        \"page2Count\": 0,\n        \"page3Count\": 0,\n        \"deepCount\": 0\n      },\n      \"topPerformers\": [],\n      \"quickWinOpportunities\": [],\n      \"allKeywords\": []\n    }\n  },\n  {\n    \"success\": true,\n    \"backlinks\": {\n      \"totalBacklinks\": 0,\n      \"referringDomains\": 0,\n      \"referringMainDomains\": 0,\n      \"referringIPs\": 0,\n      \"dofollow\": 0,\n      \"nofollow\": 0,\n      \"rank\": 0,\n      \"brokenBacklinks\": 0,\n      \"dofollowPercent\": 0\n    }\n  }\n];\n\n// Return each item as a separate output item for the Aggregate Data node\nreturn testData.map(item => ({ json: item }));"
+      },
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        816,
+        1776
+      ],
+      "id": "f3864b19-6b6a-4ee4-91e4-e15ced642705",
+      "name": "Test Empty Data1"
+    },
+    {
+      "parameters": {
+        "jsCode": "// Test Data Node - Mock API Responses for Testing (Zeroed Values)\n// This node bypasses the API calls and provides test data directly to Aggregate Data node\n\nconst testData = [\n  {\n    \"success\": 40204,\n    \"status\": \"complete\",\n    \"onPage\": {\n      \"crawlProgress\": \"finished\",\n      \"pagesCrawled\": 0,\n      \"pagesInQueue\": 0,\n      \"issues\": {\n        \"critical\": 0,\n        \"warnings\": 0,\n        \"notices\": 0\n      },\n      \"pageMetrics\": {\n        \"brokenLinks\": 0,\n        \"brokenResources\": 0,\n        \"duplicateTitle\": 0,\n        \"duplicateDescription\": 0,\n        \"duplicateContent\": 0\n      },\n      \"performance\": {\n        \"avgPageLoadTime\": 0,\n        \"https\": 0,\n        \"mobileUsability\": false\n      }\n    }\n  },\n  {\n    \"success\": 40204,\n    \"domainRank\": {\n      \"target\": null,\n      \"location\": 0,\n      \"language\": null,\n      \"positions\": {\n        \"top3\": 0,\n        \"top10\": 0,\n        \"page2\": 0,\n        \"page3\": 0,\n        \"page4Plus\": 0\n      },\n      \"estimatedTrafficValue\": 0,\n      \"totalKeywords\": 0,\n      \"estimatedPaidTrafficCost\": 0,\n      \"movement\": {\n        \"newKeywords\": 0,\n        \"improved\": 0,\n        \"declined\": 0,\n        \"lost\": 0\n      }\n    }\n  },\n  {\n    \"success\": 40204,\n    \"keywords\": {\n      \"summary\": {\n        \"totalKeywords\": 0,\n        \"totalSearchVolume\": 0,\n        \"totalETV\": 0,\n        \"brandedCount\": 0,\n        \"unbrandedCount\": 0,\n        \"brandedPercent\": 0,\n        \"unbrandedPercent\": 0\n      },\n      \"distribution\": {\n        \"top3Count\": 0,\n        \"top10Count\": 0,\n        \"page2Count\": 0,\n        \"page3Count\": 0,\n        \"deepCount\": 0\n      },\n      \"topPerformers\": [],\n      \"quickWinOpportunities\": [],\n      \"allKeywords\": []\n    }\n  },\n  {\n    \"success\": 40204,\n    \"backlinks\": {\n      \"totalBacklinks\": 0,\n      \"referringDomains\": 0,\n      \"referringMainDomains\": 0,\n      \"referringIPs\": 0,\n      \"dofollow\": 0,\n      \"nofollow\": 0,\n      \"rank\": 0,\n      \"brokenBacklinks\": 0,\n      \"dofollowPercent\": 0\n    }\n  }\n];\n\n// Return each item as a separate output item for the Aggregate Data node\nreturn testData.map(item => ({ json: item }));"
+      },
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        816,
+        1936
+      ],
+      "id": "996fd989-ac15-40d1-8a0b-7a8e2f37f684",
+      "name": "Test Subscription Error Data1"
+    },
+    {
+      "parameters": {
+        "jsCode": "// Validate Data - Check if we have meaningful data (not all zeros/null/empty)\nconst input = $input.first().json;\n\n// ✅ FIX: Extract aggregatedData - Handle both direct data and nested structure\nconst data = input.aggregatedData || input;\n\n// Check OnPage - Look for ANY meaningful data\nconst hasOnPage = data.onPage?.success && (\n  (data.onPage.onPage?.pagesCrawled > 0) ||\n  (data.onPage.onPage?.issues?.critical > 0) ||\n  (data.onPage.onPage?.issues?.warnings > 0) ||\n  (data.onPage.onPage?.issues?.notices > 0) ||\n  (data.onPage.onPage?.pageMetrics?.brokenLinks > 0) ||\n  (data.onPage.onPage?.pageMetrics?.brokenResources > 0) ||\n  (data.onPage.onPage?.pageMetrics?.duplicateTitle > 0) ||\n  (data.onPage.onPage?.pageMetrics?.duplicateDescription > 0) ||\n  (data.onPage.onPage?.pageMetrics?.duplicateContent > 0) ||\n  (data.onPage.onPage?.performance?.avgPageLoadTime > 0) ||\n  (data.onPage.onPage?.performance?.mobileUsability === true) ||\n  (data.onPage.onPage?.crawlProgress && data.onPage.onPage.crawlProgress !== '')\n);\n\n// Check Domain Rank - Look for ANY meaningful data\nconst hasDomainRank = data.domainRank?.success && (\n  (data.domainRank.domainRank?.totalKeywords > 0) ||\n  (data.domainRank.domainRank?.estimatedTrafficValue > 0) ||\n  (data.domainRank.domainRank?.estimatedPaidTrafficCost > 0) ||\n  (data.domainRank.domainRank?.positions?.top3 > 0) ||\n  (data.domainRank.domainRank?.positions?.top10 > 0) ||\n  (data.domainRank.domainRank?.positions?.page2 > 0) ||\n  (data.domainRank.domainRank?.positions?.page3 > 0) ||\n  (data.domainRank.domainRank?.positions?.page4Plus > 0) ||\n  (data.domainRank.domainRank?.movement?.newKeywords > 0) ||\n  (data.domainRank.domainRank?.movement?.improved > 0) ||\n  (data.domainRank.domainRank?.target && data.domainRank.domainRank.target !== '')\n);\n\n// Check Keywords - Look for ANY meaningful data\nconst hasKeywords = data.keywords?.success && (\n  (data.keywords.keywords?.summary?.totalKeywords > 0) ||\n  (data.keywords.keywords?.summary?.totalSearchVolume > 0) ||\n  (data.keywords.keywords?.summary?.totalETV > 0) ||\n  (data.keywords.keywords?.distribution?.top3Count > 0) ||\n  (data.keywords.keywords?.distribution?.top10Count > 0) ||\n  (data.keywords.keywords?.topPerformers?.length > 0) ||\n  (data.keywords.keywords?.quickWinOpportunities?.length > 0) ||\n  (data.keywords.keywords?.allKeywords?.length > 0)\n);\n\n// Check Backlinks - Look for ANY meaningful data\nconst hasBacklinks = data.backlinks?.success && (\n  (data.backlinks.backlinks?.totalBacklinks > 0) ||\n  (data.backlinks.backlinks?.referringDomains > 0) ||\n  (data.backlinks.backlinks?.referringMainDomains > 0) ||\n  (data.backlinks.backlinks?.dofollow > 0) ||\n  (data.backlinks.backlinks?.nofollow > 0) ||\n  (data.backlinks.backlinks?.rank > 0)\n);\n\n// Count valid data sources\nconst dataCount = [hasOnPage, hasDomainRank, hasKeywords, hasBacklinks].filter(Boolean).length;\n\n// Require at least 2 out of 4 data sources to be valid\nconst hasValidData = dataCount >= 2;\n\nreturn {\n  hasValidData: hasValidData,\n  dataCount: dataCount,\n  totalSources: 4,\n  checks: {\n    onPage: hasOnPage,\n    domainRank: hasDomainRank,\n    keywords: hasKeywords,\n    backlinks: hasBacklinks\n  },\n  aggregatedData: data,\n  validationMessage: hasValidData \n    ? `Valid: ${dataCount}/4 data sources available`\n    : `Invalid: Only ${dataCount}/4 data sources available (all zeros/null/empty)`\n};"
+      },
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        1168,
+        1408
+      ],
+      "id": "a919cba0-30f5-4145-86e1-1bb6a01887a5",
+      "name": "Validate Data1"
     }
   ],
   "pinData": {},
@@ -1307,7 +1754,7 @@
       "main": [
         [
           {
-            "node": "Generate Prompt",
+            "node": "Check Subscription",
             "type": "main",
             "index": 0
           }
@@ -1608,7 +2055,7 @@
       "main": [
         [
           {
-            "node": "Search Previous Reports",
+            "node": "Validate Data1",
             "type": "main",
             "index": 0
           }
@@ -1742,13 +2189,203 @@
           }
         ]
       ]
+    },
+    "Test Complete Data": {
+      "main": [
+        []
+      ]
+    },
+    "Test Empty Data": {
+      "main": [
+        []
+      ]
+    },
+    "Check Data": {
+      "main": [
+        [
+          {
+            "node": "Generate Prompt",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "Format Error",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Format Error": {
+      "main": [
+        [
+          {
+            "node": "Send Error",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Validate Data": {
+      "main": [
+        [
+          {
+            "node": "Check Data",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "If1": {
+      "main": [
+        [
+          {
+            "node": "Format Subscription Error",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "Validate Data",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Check Subscription": {
+      "main": [
+        [
+          {
+            "node": "If1",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Format Subscription Error": {
+      "main": [
+        [
+          {
+            "node": "Send Subscription Error",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Test Subscription Error Data": {
+      "main": [
+        []
+      ]
+    },
+    "Check Subscription2": {
+      "main": [
+        [
+          {
+            "node": "If2",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Format Subscription Error1": {
+      "main": [
+        [
+          {
+            "node": "Send Subscription Error1",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "If2": {
+      "main": [
+        [
+          {
+            "node": "Format Subscription Error1",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "Check Data1",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Format Error1": {
+      "main": [
+        [
+          {
+            "node": "Send Error1",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Check Data1": {
+      "main": [
+        [
+          {
+            "node": "Search Previous Reports",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "Format Error1",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Test Complete Data1": {
+      "main": [
+        []
+      ]
+    },
+    "Validate Data1": {
+      "main": [
+        [
+          {
+            "node": "Check Subscription2",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Test Empty Data1": {
+      "main": [
+        []
+      ]
+    },
+    "Test Subscription Error Data1": {
+      "main": [
+        []
+      ]
     }
   },
-  "active": true,
+  "active": false,
   "settings": {
     "executionOrder": "v1"
   },
-  "versionId": "8688ab32-6aee-42e3-b1db-16745541072b",
+  "versionId": "734c6a7e-fb39-4ad8-8377-29a350d8857f",
   "meta": {
     "templateCredsSetupCompleted": true,
     "instanceId": "151305d708accaf9ba7df3ae300984e7c14a108b131ed2d081a3bd48f670f5c4"
