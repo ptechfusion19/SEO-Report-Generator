@@ -262,6 +262,44 @@
             color: #e57373;
             border: 1px solid rgba(244, 67, 54, 0.4);
         }
+
+        .url-validation {
+            display: flex;
+            align-items: center;
+            gap: 8px;
+            margin-top: 5px;
+            font-size: 12px;
+        }
+
+        .url-validation.checking {
+            color: #00d4ff;
+        }
+
+        .url-validation.valid {
+            color: #81c784;
+        }
+
+        .url-validation.invalid {
+            color: #e57373;
+        }
+
+        .url-validation-icon {
+            width: 14px;
+            height: 14px;
+            display: inline-block;
+        }
+
+        input[type="url"].validating {
+            border-color: #00d4ff;
+        }
+
+        input[type="url"].valid {
+            border-color: #81c784;
+        }
+
+        input[type="url"].invalid {
+            border-color: #e57373;
+        }
     </style>
 </head>
 <body>
@@ -311,6 +349,10 @@
                 <label for="targetUrl">Target URL *</label>
                 <input type="url" id="targetUrl" name="targetUrl" placeholder="https://www.example.com" required>
                 <p class="info-text">Enter the website URL to analyze</p>
+                <div id="urlValidation" class="url-validation hidden">
+                    <span class="url-validation-icon"></span>
+                    <span class="url-validation-text"></span>
+                </div>
             </div>
 
             <!-- Email -->
@@ -356,7 +398,7 @@
 
             <!-- Success Message -->
             <div class="success-message" id="successMessage">
-                ✅ Report generation started successfully! Check your email for the report.
+                ✅ Report generation started successfully! The report will be sent to your email within 5-10 minutes.
             </div>
 
             <!-- Error Message -->
@@ -433,6 +475,116 @@
             }
         }
 
+        // URL Validation Function
+        async function validateUrlAccessibility(url) {
+            const urlInput = document.getElementById('targetUrl');
+            const validationDiv = document.getElementById('urlValidation');
+            const validationText = validationDiv.querySelector('.url-validation-text');
+            const validationIcon = validationDiv.querySelector('.url-validation-icon');
+
+            // Show validation in progress
+            validationDiv.classList.remove('hidden', 'valid', 'invalid');
+            validationDiv.classList.add('checking');
+            urlInput.classList.add('validating');
+            validationIcon.innerHTML = '<div class="spinner" style="width:14px;height:14px;border-width:2px;"></div>';
+            validationText.textContent = 'Checking URL accessibility...';
+
+            try {
+                // Normalize URL
+                let testUrl = url.trim();
+                if (!testUrl.startsWith('http://') && !testUrl.startsWith('https://')) {
+                    testUrl = 'https://' + testUrl;
+                }
+
+                // Use CORS proxy to check URL accessibility
+                const proxyUrl = `https://api.allorigins.win/get?url=${encodeURIComponent(testUrl)}`;
+                const controller = new AbortController();
+                const timeoutId = setTimeout(() => controller.abort(), 10000);
+
+                const response = await fetch(proxyUrl, {
+                    method: 'GET',
+                    signal: controller.signal
+                });
+
+                clearTimeout(timeoutId);
+
+                if (response.ok) {
+                    const data = await response.json();
+                    // If we get a response (even if it's an error page), the URL is accessible
+                    validationDiv.classList.remove('checking');
+                    validationDiv.classList.add('valid');
+                    urlInput.classList.remove('validating');
+                    urlInput.classList.add('valid');
+                    validationIcon.innerHTML = '✅';
+                    validationText.textContent = 'URL is accessible';
+                    return true;
+                } else {
+                    throw new Error('Failed to validate URL');
+                }
+
+            } catch (error) {
+                // If CORS proxy fails, try iframe method as fallback
+                try {
+                    let testUrl = url.trim();
+                    if (!testUrl.startsWith('http://') && !testUrl.startsWith('https://')) {
+                        testUrl = 'https://' + testUrl;
+                    }
+
+                    await new Promise((resolve, reject) => {
+                        const iframe = document.createElement('iframe');
+                        iframe.style.display = 'none';
+                        iframe.style.width = '1px';
+                        iframe.style.height = '1px';
+                        iframe.src = testUrl;
+                        
+                        const timeout = setTimeout(() => {
+                            if (document.body.contains(iframe)) {
+                                document.body.removeChild(iframe);
+                            }
+                            reject(new Error('Timeout'));
+                        }, 8000);
+
+                        iframe.onload = () => {
+                            clearTimeout(timeout);
+                            setTimeout(() => {
+                                if (document.body.contains(iframe)) {
+                                    document.body.removeChild(iframe);
+                                }
+                            }, 100);
+                            resolve();
+                        };
+
+                        iframe.onerror = () => {
+                            clearTimeout(timeout);
+                            if (document.body.contains(iframe)) {
+                                document.body.removeChild(iframe);
+                            }
+                            reject(new Error('Failed to load'));
+                        };
+
+                        document.body.appendChild(iframe);
+                    });
+
+                    validationDiv.classList.remove('checking');
+                    validationDiv.classList.add('valid');
+                    urlInput.classList.remove('validating');
+                    urlInput.classList.add('valid');
+                    validationIcon.innerHTML = '✅';
+                    validationText.textContent = 'URL is accessible';
+                    return true;
+
+                } catch (fallbackError) {
+                    validationDiv.classList.remove('checking');
+                    validationDiv.classList.add('invalid');
+                    urlInput.classList.remove('validating');
+                    urlInput.classList.add('invalid');
+                    validationIcon.innerHTML = '❌';
+                    validationText.textContent = 'URL is not accessible. Please check the URL and try again.';
+                    return false;
+                }
+            }
+        }
+
         // Form submission handler
         document.getElementById('reportForm').addEventListener('submit', async function(e) {
             e.preventDefault();
@@ -455,6 +607,16 @@
             // Validate required fields
             if (!targetUrl || !email) {
                 showError('Please fill in all required fields');
+                return;
+            }
+
+            // Validate URL accessibility
+            showLoading('Validating URL accessibility...');
+            const isUrlValid = await validateUrlAccessibility(targetUrl);
+            hideLoading();
+
+            if (!isUrlValid) {
+                showError('The URL you entered is not accessible. Please check the URL and ensure the website is online.');
                 return;
             }
 
@@ -487,7 +649,7 @@
                 : 'ProgressReport';
 
             // Show loading state
-            showLoading();
+            showLoading('Submitting report request...');
 
             try {
                 // Make API request
@@ -502,10 +664,10 @@
                 // Check response
                 if (response.ok || response.status === 200 || response.status === 201) {
                     showSuccess();
-                    // Reset form after 3 seconds
+                    // Reset form after 5 seconds
                     setTimeout(() => {
                         resetForm();
-                    }, 3000);
+                    }, 5000);
                 } else {
                     const errorData = await response.text();
                     showError(`Server error: ${response.status}. ${errorData}`);
@@ -519,8 +681,13 @@
         });
 
         // Helper functions
-        function showLoading() {
-            document.getElementById('loading').classList.add('show');
+        function showLoading(message = 'Generating report... This may take a few minutes.') {
+            const loadingDiv = document.getElementById('loading');
+            const loadingText = loadingDiv.querySelector('span');
+            if (loadingText) {
+                loadingText.textContent = message;
+            }
+            loadingDiv.classList.add('show');
             document.getElementById('submitBtn').disabled = true;
         }
 
