@@ -475,7 +475,7 @@
             }
         }
 
-        // URL Validation Function - Strict: Only accepts URLs that actually load
+        // URL Validation Function - Balanced: Checks accessibility but is lenient
         async function validateUrlAccessibility(url) {
             const urlInput = document.getElementById('targetUrl');
             const validationDiv = document.getElementById('urlValidation');
@@ -520,17 +520,18 @@
                 return false;
             }
 
-            // Method 1: Use CORS proxy to actually check if URL loads
+            let hasClearError = false;
+            let hasSuccess = false;
+
+            // Method 1: Use CORS proxy to check if URL loads
             const proxyServices = [
-                `https://api.allorigins.win/get?url=${encodeURIComponent(testUrl)}`,
-                `https://corsproxy.io/?${encodeURIComponent(testUrl)}`,
-                `https://api.codetabs.com/v1/proxy?quest=${encodeURIComponent(testUrl)}`
+                `https://api.allorigins.win/get?url=${encodeURIComponent(testUrl)}`
             ];
 
             for (const proxyUrl of proxyServices) {
                 try {
                     const controller = new AbortController();
-                    const timeoutId = setTimeout(() => controller.abort(), 10000);
+                    const timeoutId = setTimeout(() => controller.abort(), 8000);
 
                     const response = await fetch(proxyUrl, {
                         method: 'GET',
@@ -540,37 +541,58 @@
                     clearTimeout(timeoutId);
 
                     if (response.ok) {
-                        const data = await response.json();
-                        
-                        // Check if we got actual content (not an error page)
-                        // For allorigins.win, check if status.http_code is 200
-                        if (data.status && data.status.http_code === 200) {
-                            validationDiv.classList.remove('checking');
-                            validationDiv.classList.add('valid');
-                            urlInput.classList.remove('validating');
-                            urlInput.classList.add('valid');
-                            validationIcon.innerHTML = '✅';
-                            validationText.textContent = 'URL is accessible';
-                            return true;
-                        }
-                        // For other proxies, if we get content, assume it's valid
-                        if (data.contents || data.content) {
-                            validationDiv.classList.remove('checking');
-                            validationDiv.classList.add('valid');
-                            urlInput.classList.remove('validating');
-                            urlInput.classList.add('valid');
-                            validationIcon.innerHTML = '✅';
-                            validationText.textContent = 'URL is accessible';
-                            return true;
+                        try {
+                            const data = await response.json();
+                            
+                            // Check HTTP status code from the proxy response
+                            if (data.status) {
+                                const httpCode = data.status.http_code;
+                                if (httpCode >= 200 && httpCode < 400) {
+                                    // Success - URL is accessible
+                                    hasSuccess = true;
+                                    break;
+                                } else if (httpCode >= 400) {
+                                    // Check if it's a clear DNS/connection error
+                                    const errorMsg = (data.status.url || '').toLowerCase();
+                                    if (errorMsg.includes('nxdomain') || 
+                                        errorMsg.includes('dns') || 
+                                        errorMsg.includes('name not resolved') ||
+                                        httpCode === 0) {
+                                        hasClearError = true;
+                                    }
+                                }
+                            }
+                            
+                            // If we got content, consider it accessible
+                            if (data.contents && data.contents.length > 0) {
+                                hasSuccess = true;
+                                break;
+                            }
+                        } catch (jsonError) {
+                            // If response is OK but JSON parse fails, still consider it accessible
+                            hasSuccess = true;
+                            break;
                         }
                     }
                 } catch (proxyError) {
-                    // Try next proxy service
+                    // Network error - don't treat as clear error, might be CORS/proxy issue
+                    console.log('Proxy check failed:', proxyError);
                     continue;
                 }
             }
 
-            // Method 2: Iframe method - actually try to load the URL
+            // If we got a clear success, accept it
+            if (hasSuccess) {
+                validationDiv.classList.remove('checking');
+                validationDiv.classList.add('valid');
+                urlInput.classList.remove('validating');
+                urlInput.classList.add('valid');
+                validationIcon.innerHTML = '✅';
+                validationText.textContent = 'URL is accessible';
+                return true;
+            }
+
+            // Method 2: Iframe method - try to load the URL
             try {
                 const isValid = await new Promise((resolve) => {
                     let resolved = false;
@@ -589,9 +611,10 @@
                             if (document.body.contains(iframe)) {
                                 document.body.removeChild(iframe);
                             }
-                            resolve(false); // Timeout = not accessible
+                            // Timeout doesn't mean it's invalid - might be slow loading
+                            resolve(null); // Return null for inconclusive
                         }
-                    }, 8000);
+                    }, 6000);
 
                     iframe.onload = () => {
                         if (!resolved) {
@@ -605,30 +628,6 @@
                             resolve(true); // Loaded successfully
                         }
                     };
-
-                    // Check for error after a short delay
-                    setTimeout(() => {
-                        if (!resolved) {
-                            try {
-                                // Try to access iframe content - if it fails, URL might be invalid
-                                const iframeDoc = iframe.contentDocument || iframe.contentWindow?.document;
-                                if (!iframeDoc || iframeDoc.location.href === 'about:blank') {
-                                    // Iframe didn't load properly
-                                    if (!resolved) {
-                                        resolved = true;
-                                        clearTimeout(timeout);
-                                        if (document.body.contains(iframe)) {
-                                            document.body.removeChild(iframe);
-                                        }
-                                        resolve(false);
-                                    }
-                                }
-                            } catch (e) {
-                                // Cross-origin or other error - might still be valid
-                                // Wait for onload
-                            }
-                        }
-                    }, 2000);
 
                     iframe.onerror = () => {
                         if (!resolved) {
@@ -644,7 +643,8 @@
                     document.body.appendChild(iframe);
                 });
 
-                if (isValid) {
+                if (isValid === true) {
+                    // Iframe loaded successfully
                     validationDiv.classList.remove('checking');
                     validationDiv.classList.add('valid');
                     urlInput.classList.remove('validating');
@@ -652,19 +652,35 @@
                     validationIcon.innerHTML = '✅';
                     validationText.textContent = 'URL is accessible';
                     return true;
+                } else if (isValid === false) {
+                    // Iframe failed to load - clear error
+                    hasClearError = true;
                 }
+                // If isValid is null (timeout), it's inconclusive - don't reject
             } catch (iframeError) {
-                console.log('Iframe validation failed:', iframeError);
+                console.log('Iframe validation error:', iframeError);
             }
 
-            // If all methods fail, URL is not accessible
+            // Only reject if we have a clear error (DNS failure, etc.)
+            if (hasClearError) {
+                validationDiv.classList.remove('checking');
+                validationDiv.classList.add('invalid');
+                urlInput.classList.remove('validating');
+                urlInput.classList.add('invalid');
+                validationIcon.innerHTML = '❌';
+                validationText.textContent = 'URL is not accessible. Please check the URL and ensure the website is online.';
+                return false;
+            }
+
+            // If checks are inconclusive but URL format is valid, accept it
+            // The backend will do the final verification
             validationDiv.classList.remove('checking');
-            validationDiv.classList.add('invalid');
+            validationDiv.classList.add('valid');
             urlInput.classList.remove('validating');
-            urlInput.classList.add('invalid');
-            validationIcon.innerHTML = '❌';
-            validationText.textContent = 'URL is not accessible. Please check the URL and ensure the website is online.';
-            return false;
+            urlInput.classList.add('valid');
+            validationIcon.innerHTML = '✅';
+            validationText.textContent = 'URL format is valid';
+            return true;
         }
 
         // Form submission handler
