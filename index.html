@@ -475,7 +475,7 @@
             }
         }
 
-        // URL Validation Function - Simplified and more reliable
+        // URL Validation Function - Strict: Only accepts URLs that actually load
         async function validateUrlAccessibility(url) {
             const urlInput = document.getElementById('targetUrl');
             const validationDiv = document.getElementById('urlValidation');
@@ -488,7 +488,7 @@
             urlInput.classList.remove('validating', 'valid', 'invalid');
             urlInput.classList.add('validating');
             validationIcon.innerHTML = '<div class="spinner" style="width:14px;height:14px;border-width:2px;"></div>';
-            validationText.textContent = 'Validating URL...';
+            validationText.textContent = 'Checking if URL is accessible...';
 
             // Normalize URL
             let testUrl = url.trim();
@@ -520,43 +520,151 @@
                 return false;
             }
 
-            // Try to verify accessibility with multiple methods
-            // Method 1: Simple fetch with no-cors (doesn't throw on CORS errors)
-            try {
-                const controller = new AbortController();
-                const timeoutId = setTimeout(() => controller.abort(), 5000);
-                
-                await fetch(testUrl, {
-                    method: 'HEAD',
-                    mode: 'no-cors',
-                    signal: controller.signal
-                });
-                
-                clearTimeout(timeoutId);
-                
-                // If fetch completes without throwing, URL is likely accessible
-                validationDiv.classList.remove('checking');
-                validationDiv.classList.add('valid');
-                urlInput.classList.remove('validating');
-                urlInput.classList.add('valid');
-                validationIcon.innerHTML = '✅';
-                validationText.textContent = 'URL is accessible';
-                return true;
-            } catch (fetchError) {
-                // Fetch failed, but URL format is valid - allow it anyway
-                // The backend will handle actual accessibility verification
-                console.log('Fetch validation inconclusive, allowing valid URL format');
+            // Method 1: Use CORS proxy to actually check if URL loads
+            const proxyServices = [
+                `https://api.allorigins.win/get?url=${encodeURIComponent(testUrl)}`,
+                `https://corsproxy.io/?${encodeURIComponent(testUrl)}`,
+                `https://api.codetabs.com/v1/proxy?quest=${encodeURIComponent(testUrl)}`
+            ];
+
+            for (const proxyUrl of proxyServices) {
+                try {
+                    const controller = new AbortController();
+                    const timeoutId = setTimeout(() => controller.abort(), 10000);
+
+                    const response = await fetch(proxyUrl, {
+                        method: 'GET',
+                        signal: controller.signal
+                    });
+
+                    clearTimeout(timeoutId);
+
+                    if (response.ok) {
+                        const data = await response.json();
+                        
+                        // Check if we got actual content (not an error page)
+                        // For allorigins.win, check if status.http_code is 200
+                        if (data.status && data.status.http_code === 200) {
+                            validationDiv.classList.remove('checking');
+                            validationDiv.classList.add('valid');
+                            urlInput.classList.remove('validating');
+                            urlInput.classList.add('valid');
+                            validationIcon.innerHTML = '✅';
+                            validationText.textContent = 'URL is accessible';
+                            return true;
+                        }
+                        // For other proxies, if we get content, assume it's valid
+                        if (data.contents || data.content) {
+                            validationDiv.classList.remove('checking');
+                            validationDiv.classList.add('valid');
+                            urlInput.classList.remove('validating');
+                            urlInput.classList.add('valid');
+                            validationIcon.innerHTML = '✅';
+                            validationText.textContent = 'URL is accessible';
+                            return true;
+                        }
+                    }
+                } catch (proxyError) {
+                    // Try next proxy service
+                    continue;
+                }
             }
 
-            // If we get here, URL format is valid but we couldn't verify accessibility
-            // Allow it anyway - backend will verify
+            // Method 2: Iframe method - actually try to load the URL
+            try {
+                const isValid = await new Promise((resolve) => {
+                    let resolved = false;
+                    const iframe = document.createElement('iframe');
+                    iframe.style.display = 'none';
+                    iframe.style.width = '1px';
+                    iframe.style.height = '1px';
+                    iframe.style.position = 'absolute';
+                    iframe.style.left = '-9999px';
+                    iframe.style.border = 'none';
+                    iframe.src = testUrl;
+                    
+                    const timeout = setTimeout(() => {
+                        if (!resolved) {
+                            resolved = true;
+                            if (document.body.contains(iframe)) {
+                                document.body.removeChild(iframe);
+                            }
+                            resolve(false); // Timeout = not accessible
+                        }
+                    }, 8000);
+
+                    iframe.onload = () => {
+                        if (!resolved) {
+                            resolved = true;
+                            clearTimeout(timeout);
+                            setTimeout(() => {
+                                if (document.body.contains(iframe)) {
+                                    document.body.removeChild(iframe);
+                                }
+                            }, 100);
+                            resolve(true); // Loaded successfully
+                        }
+                    };
+
+                    // Check for error after a short delay
+                    setTimeout(() => {
+                        if (!resolved) {
+                            try {
+                                // Try to access iframe content - if it fails, URL might be invalid
+                                const iframeDoc = iframe.contentDocument || iframe.contentWindow?.document;
+                                if (!iframeDoc || iframeDoc.location.href === 'about:blank') {
+                                    // Iframe didn't load properly
+                                    if (!resolved) {
+                                        resolved = true;
+                                        clearTimeout(timeout);
+                                        if (document.body.contains(iframe)) {
+                                            document.body.removeChild(iframe);
+                                        }
+                                        resolve(false);
+                                    }
+                                }
+                            } catch (e) {
+                                // Cross-origin or other error - might still be valid
+                                // Wait for onload
+                            }
+                        }
+                    }, 2000);
+
+                    iframe.onerror = () => {
+                        if (!resolved) {
+                            resolved = true;
+                            clearTimeout(timeout);
+                            if (document.body.contains(iframe)) {
+                                document.body.removeChild(iframe);
+                            }
+                            resolve(false); // Error loading
+                        }
+                    };
+
+                    document.body.appendChild(iframe);
+                });
+
+                if (isValid) {
+                    validationDiv.classList.remove('checking');
+                    validationDiv.classList.add('valid');
+                    urlInput.classList.remove('validating');
+                    urlInput.classList.add('valid');
+                    validationIcon.innerHTML = '✅';
+                    validationText.textContent = 'URL is accessible';
+                    return true;
+                }
+            } catch (iframeError) {
+                console.log('Iframe validation failed:', iframeError);
+            }
+
+            // If all methods fail, URL is not accessible
             validationDiv.classList.remove('checking');
-            validationDiv.classList.add('valid');
+            validationDiv.classList.add('invalid');
             urlInput.classList.remove('validating');
-            urlInput.classList.add('valid');
-            validationIcon.innerHTML = '✅';
-            validationText.textContent = 'URL format is valid';
-            return true;
+            urlInput.classList.add('invalid');
+            validationIcon.innerHTML = '❌';
+            validationText.textContent = 'URL is not accessible. Please check the URL and ensure the website is online.';
+            return false;
         }
 
         // Form submission handler
