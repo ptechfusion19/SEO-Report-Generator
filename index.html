@@ -579,12 +579,12 @@
             }
         }
 
-        // Method 1: CORS Proxy Check - Improved error detection
+        // Method 1: CORS Proxy Check - Enhanced DNS error detection
         async function checkWithProxy(url) {
             try {
                 const proxyUrl = `https://api.allorigins.win/get?url=${encodeURIComponent(url)}`;
                 const controller = new AbortController();
-                const timeoutId = setTimeout(() => controller.abort(), 10000);
+                const timeoutId = setTimeout(() => controller.abort(), 12000);
 
                 const response = await fetch(proxyUrl, {
                     method: 'GET',
@@ -601,46 +601,83 @@
                         const httpCode = data.status.http_code;
                         const statusMessage = (data.status.message || '').toLowerCase();
                         const statusUrl = (data.status.url || '').toLowerCase();
+                        const contents = (data.contents || '').toLowerCase();
                         
                         // Success codes - URL is accessible
                         if (httpCode >= 200 && httpCode < 400) {
                             return true;
                         }
                         
-                        // Clear error codes (DNS, connection errors)
+                        // Check for DNS errors in multiple places
+                        const dnsErrorIndicators = [
+                            'nxdomain',
+                            'dns_probe_finished_nxdomain',
+                            'dns',
+                            'name not resolved',
+                            'getaddrinfo',
+                            'enotfound',
+                            'err_name_not_resolved',
+                            'this site can\'t be reached',
+                            'server not found',
+                            'host not found'
+                        ];
+                        
+                        const hasDnsError = dnsErrorIndicators.some(indicator => 
+                            statusMessage.includes(indicator) ||
+                            statusUrl.includes(indicator) ||
+                            contents.includes(indicator)
+                        );
+                        
+                        // Clear DNS/connection errors
                         if (httpCode === 0 || 
                             httpCode >= 500 ||
-                            statusMessage.includes('nxdomain') ||
-                            statusMessage.includes('dns') ||
-                            statusMessage.includes('name not resolved') ||
-                            statusMessage.includes('getaddrinfo') ||
-                            statusMessage.includes('enotfound') ||
-                            statusUrl.includes('nxdomain') ||
-                            statusUrl.includes('dns') ||
-                            statusUrl.includes('name not resolved')) {
+                            hasDnsError) {
                             return 'error';
                         }
                         
-                        // 4xx errors (client errors) - URL exists but might have issues
+                        // 4xx errors (client errors)
                         if (httpCode >= 400 && httpCode < 500) {
-                            // For 404, check if it's a DNS error or actual 404
+                            // For 404, check if it's actually a DNS error or real 404
                             if (httpCode === 404) {
-                                // If we get a 404, the domain exists but page doesn't
-                                // This is still considered "accessible" (domain is valid)
-                                return true;
+                                // If we have content (even error page), domain exists
+                                if (data.contents && data.contents.length > 100) {
+                                    return true; // Domain exists, page doesn't (still accessible)
+                                }
+                                // No content might mean DNS error
+                                if (hasDnsError) {
+                                    return 'error';
+                                }
+                                // Inconclusive - might be real 404 or DNS error
+                                return false;
                             }
-                            // Other 4xx - might be accessible but with errors
+                            // Other 4xx - domain exists but has issues
                             return false;
                         }
                     }
                     
-                    // Check if we got actual content
+                    // Check if we got actual HTML content (not error page)
                     if (data.contents && data.contents.length > 0) {
+                        const content = data.contents.toLowerCase();
+                        // Check if content looks like an error page
+                        if (content.includes('this site can\'t be reached') ||
+                            content.includes('dns_probe_finished_nxdomain') ||
+                            content.includes('err_name_not_resolved') ||
+                            content.includes('server not found')) {
+                            return 'error';
+                        }
+                        // Has content and doesn't look like error page
                         return true;
                     }
                     
-                    // If status exists but no content and no clear success code, it's an error
+                    // If status exists but no content and no clear success code
                     if (data.status && data.status.http_code) {
+                        // Check if it's a DNS error
+                        const statusMsg = (data.status.message || '').toLowerCase();
+                        if (statusMsg.includes('nxdomain') || 
+                            statusMsg.includes('dns') || 
+                            statusMsg.includes('name not resolved')) {
+                            return 'error';
+                        }
                         return false;
                     }
                 }
@@ -650,15 +687,15 @@
             } catch (error) {
                 // Check error type
                 if (error.name === 'AbortError') {
-                    // Timeout - inconclusive
-                    return null;
+                    // Timeout - treat as failure (URL might not be accessible)
+                    return false;
                 }
                 // Other network errors - treat as failure
                 return false;
             }
         }
 
-        // Method 2: Iframe Check - Improved with better error detection
+        // Method 2: Iframe Check - Enhanced DNS error detection
         function checkWithIframe(url) {
             return new Promise((resolve) => {
                 let resolved = false;
@@ -672,21 +709,51 @@
                         if (document.body.contains(iframe)) {
                             document.body.removeChild(iframe);
                         }
-                        // Timeout after 8 seconds - likely not accessible
+                        // Timeout after 10 seconds - likely not accessible
                         resolve(false);
                     }
-                }, 8000);
+                }, 10000);
 
                 iframe.onload = () => {
                     if (!resolved) {
-                        resolved = true;
-                        clearTimeout(timeout);
+                        // Wait a bit to check if it's an error page
                         setTimeout(() => {
-                            if (document.body.contains(iframe)) {
-                                document.body.removeChild(iframe);
+                            if (!resolved) {
+                                try {
+                                    const iframeDoc = iframe.contentDocument || iframe.contentWindow?.document;
+                                    if (iframeDoc) {
+                                        const bodyText = iframeDoc.body?.innerText?.toLowerCase() || '';
+                                        const title = iframeDoc.title?.toLowerCase() || '';
+                                        
+                                        // Check for DNS error pages
+                                        if (bodyText.includes('this site can\'t be reached') ||
+                                            bodyText.includes('dns_probe_finished_nxdomain') ||
+                                            bodyText.includes('err_name_not_resolved') ||
+                                            bodyText.includes('server not found') ||
+                                            title.includes('this site can\'t be reached')) {
+                                            resolved = true;
+                                            clearTimeout(timeout);
+                                            if (document.body.contains(iframe)) {
+                                                document.body.removeChild(iframe);
+                                            }
+                                            resolve(false);
+                                            return;
+                                        }
+                                    }
+                                } catch (e) {
+                                    // CORS - can't check, assume it loaded successfully
+                                }
+                                
+                                resolved = true;
+                                clearTimeout(timeout);
+                                setTimeout(() => {
+                                    if (document.body.contains(iframe)) {
+                                        document.body.removeChild(iframe);
+                                    }
+                                }, 100);
+                                resolve(true); // Loaded successfully
                             }
-                        }, 100);
-                        resolve(true); // Loaded successfully
+                        }, 500);
                     }
                 };
 
@@ -701,14 +768,12 @@
                     }
                 };
 
-                // Additional check: Try to detect if iframe loaded an error page
+                // Early check for error pages
                 setTimeout(() => {
                     if (!resolved) {
                         try {
-                            // Try to access iframe content (might fail due to CORS)
                             const iframeDoc = iframe.contentDocument || iframe.contentWindow?.document;
                             if (iframeDoc) {
-                                // If we can access the document, check if it's an error page
                                 const bodyText = iframeDoc.body?.innerText?.toLowerCase() || '';
                                 if (bodyText.includes('this site can\'t be reached') ||
                                     bodyText.includes('dns_probe_finished_nxdomain') ||
@@ -727,7 +792,7 @@
                             // CORS error - can't check, wait for onload/onerror
                         }
                     }
-                }, 3000);
+                }, 2000);
 
                 document.body.appendChild(iframe);
             });
