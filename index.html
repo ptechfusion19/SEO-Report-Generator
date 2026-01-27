@@ -289,44 +289,6 @@
             display: inline-block;
         }
 
-        .check-url-btn {
-            background: linear-gradient(135deg, #00d4ff 0%, #00a8cc 100%);
-            color: #0a1929;
-            border: none;
-            border-radius: 10px;
-            font-size: 14px;
-            font-weight: 600;
-            cursor: pointer;
-            transition: all 0.3s ease;
-            box-shadow: 0 2px 10px rgba(0, 212, 255, 0.3);
-        }
-
-        .check-url-btn:hover {
-            transform: translateY(-2px);
-            box-shadow: 0 4px 15px rgba(0, 212, 255, 0.4);
-            background: linear-gradient(135deg, #00e5ff 0%, #00b8e6 100%);
-        }
-
-        .check-url-btn:active {
-            transform: translateY(0);
-        }
-
-        .check-url-btn:disabled {
-            opacity: 0.6;
-            cursor: not-allowed;
-            transform: none;
-        }
-
-        .url-checkbox-container {
-            padding: 10px;
-            background: rgba(0, 212, 255, 0.1);
-            border: 1px solid rgba(0, 212, 255, 0.3);
-            border-radius: 8px;
-        }
-
-        .url-checkbox-container.hidden {
-            display: none;
-        }
         }
 
         input[type="url"].validating {
@@ -387,21 +349,8 @@
             <!-- Target URL -->
             <div class="form-group">
                 <label for="targetUrl">Target URL *</label>
-                <div style="display: flex; gap: 10px; align-items: flex-start;">
-                    <input type="url" id="targetUrl" name="targetUrl" placeholder="https://www.example.com/" required style="flex: 1;">
-                    <button type="button" id="checkUrlBtn" class="check-url-btn" style="padding: 12px 20px; white-space: nowrap;">Check</button>
-                </div>
+                <input type="url" id="targetUrl" name="targetUrl" placeholder="https://www.example.com/" required>
                 <p class="info-text">Enter the website URL to analyze</p>
-                <div id="urlValidation" class="url-validation hidden">
-                    <span class="url-validation-icon"></span>
-                    <span class="url-validation-text"></span>
-                </div>
-                <div id="urlCheckboxContainer" class="url-checkbox-container hidden" style="margin-top: 10px;">
-                    <label style="display: flex; align-items: center; gap: 8px; cursor: pointer; color: #e0e0e0;">
-                        <input type="checkbox" id="urlVerifiedCheckbox" style="width: 18px; height: 18px; cursor: pointer;">
-                        <span>I confirm this URL is correct and valid</span>
-                    </label>
-                </div>
             </div>
 
             <!-- Email -->
@@ -517,10 +466,7 @@
         // Update submit button state
         function updateSubmitButton() {
             const submitBtn = document.getElementById('submitBtn');
-            const urlCheckbox = document.getElementById('urlVerifiedCheckbox');
-            const isUrlVerified = urlCheckbox && urlCheckbox.checked;
-            
-            if (selectedReportType && selectedAudience && isUrlVerified) {
+            if (selectedReportType && selectedAudience) {
                 submitBtn.disabled = false;
             } else {
                 submitBtn.disabled = true;
@@ -699,44 +645,6 @@
             }
         }
 
-        // Check URL button event listener
-        document.getElementById('checkUrlBtn').addEventListener('click', async function() {
-            const urlInput = document.getElementById('targetUrl');
-            const targetUrl = urlInput.value.trim();
-            const checkBtn = this;
-            
-            if (!targetUrl) {
-                alert('Please enter a URL first');
-                return;
-            }
-            
-            // Disable button during validation
-            checkBtn.disabled = true;
-            checkBtn.textContent = 'Checking...';
-            
-            // Validate URL
-            await validateUrlAccessibility(targetUrl);
-            
-            // Re-enable button
-            checkBtn.disabled = false;
-            checkBtn.textContent = 'Check';
-        });
-
-        // Checkbox change event listener
-        document.getElementById('urlVerifiedCheckbox').addEventListener('change', function() {
-            updateSubmitButton();
-        });
-
-        // URL input change event listener - reset checkbox when URL changes
-        document.getElementById('targetUrl').addEventListener('input', function() {
-            const checkbox = document.getElementById('urlVerifiedCheckbox');
-            const checkboxContainer = document.getElementById('urlCheckboxContainer');
-            
-            // Reset checkbox and hide container when URL changes
-            checkbox.checked = false;
-            checkboxContainer.classList.add('hidden');
-            updateSubmitButton();
-        });
 
         // Form submission handler
         document.getElementById('reportForm').addEventListener('submit', async function(e) {
@@ -760,13 +668,6 @@
             // Validate required fields
             if (!targetUrl || !email) {
                 showError('Please fill in all required fields');
-                return;
-            }
-
-            // Check if URL is verified via checkbox
-            const urlCheckbox = document.getElementById('urlVerifiedCheckbox');
-            if (!urlCheckbox || !urlCheckbox.checked) {
-                showError('Please verify the URL by clicking the "Check" button and confirming it is correct.');
                 return;
             }
 
