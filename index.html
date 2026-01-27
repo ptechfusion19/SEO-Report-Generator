@@ -289,6 +289,46 @@
             display: inline-block;
         }
 
+        .check-url-btn {
+            background: linear-gradient(135deg, #00d4ff 0%, #00a8cc 100%);
+            color: #0a1929;
+            border: none;
+            border-radius: 10px;
+            font-size: 14px;
+            font-weight: 600;
+            cursor: pointer;
+            transition: all 0.3s ease;
+            box-shadow: 0 2px 10px rgba(0, 212, 255, 0.3);
+        }
+
+        .check-url-btn:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 4px 15px rgba(0, 212, 255, 0.4);
+            background: linear-gradient(135deg, #00e5ff 0%, #00b8e6 100%);
+        }
+
+        .check-url-btn:active {
+            transform: translateY(0);
+        }
+
+        .check-url-btn:disabled {
+            opacity: 0.6;
+            cursor: not-allowed;
+            transform: none;
+        }
+
+        .url-checkbox-container {
+            padding: 10px;
+            background: rgba(0, 212, 255, 0.1);
+            border: 1px solid rgba(0, 212, 255, 0.3);
+            border-radius: 8px;
+        }
+
+        .url-checkbox-container.hidden {
+            display: none;
+        }
+        }
+
         input[type="url"].validating {
             border-color: #00d4ff;
         }
@@ -347,11 +387,20 @@
             <!-- Target URL -->
             <div class="form-group">
                 <label for="targetUrl">Target URL *</label>
-                <input type="url" id="targetUrl" name="targetUrl" placeholder="https://www.example.com" required>
+                <div style="display: flex; gap: 10px; align-items: flex-start;">
+                    <input type="url" id="targetUrl" name="targetUrl" placeholder="https://www.example.com/" required style="flex: 1;">
+                    <button type="button" id="checkUrlBtn" class="check-url-btn" style="padding: 12px 20px; white-space: nowrap;">Check</button>
+                </div>
                 <p class="info-text">Enter the website URL to analyze</p>
                 <div id="urlValidation" class="url-validation hidden">
                     <span class="url-validation-icon"></span>
                     <span class="url-validation-text"></span>
+                </div>
+                <div id="urlCheckboxContainer" class="url-checkbox-container hidden" style="margin-top: 10px;">
+                    <label style="display: flex; align-items: center; gap: 8px; cursor: pointer; color: #e0e0e0;">
+                        <input type="checkbox" id="urlVerifiedCheckbox" style="width: 18px; height: 18px; cursor: pointer;">
+                        <span>I confirm this URL is correct and valid</span>
+                    </label>
                 </div>
             </div>
 
@@ -468,19 +517,24 @@
         // Update submit button state
         function updateSubmitButton() {
             const submitBtn = document.getElementById('submitBtn');
-            if (selectedReportType && selectedAudience) {
+            const urlCheckbox = document.getElementById('urlVerifiedCheckbox');
+            const isUrlVerified = urlCheckbox && urlCheckbox.checked;
+            
+            if (selectedReportType && selectedAudience && isUrlVerified) {
                 submitBtn.disabled = false;
             } else {
                 submitBtn.disabled = true;
             }
         }
 
-        // URL Validation Function - Improved: Uses multiple methods in parallel
+        // URL Validation Function - Simple and Reliable
         async function validateUrlAccessibility(url) {
             const urlInput = document.getElementById('targetUrl');
             const validationDiv = document.getElementById('urlValidation');
             const validationText = validationDiv.querySelector('.url-validation-text');
             const validationIcon = validationDiv.querySelector('.url-validation-icon');
+            const checkboxContainer = document.getElementById('urlCheckboxContainer');
+            const urlCheckbox = document.getElementById('urlVerifiedCheckbox');
 
             // Helper functions for UI updates
             function showValid(message) {
@@ -490,6 +544,11 @@
                 urlInput.classList.add('valid');
                 validationIcon.innerHTML = '✅';
                 validationText.textContent = message;
+                // Show checkbox container
+                checkboxContainer.classList.remove('hidden');
+                // Uncheck checkbox (user needs to check it manually)
+                urlCheckbox.checked = false;
+                updateSubmitButton();
             }
 
             function showInvalid(message) {
@@ -499,6 +558,11 @@
                 urlInput.classList.add('invalid');
                 validationIcon.innerHTML = '❌';
                 validationText.textContent = message;
+                // Hide checkbox container
+                checkboxContainer.classList.add('hidden');
+                // Uncheck checkbox
+                urlCheckbox.checked = false;
+                updateSubmitButton();
             }
 
             // Show validation in progress
@@ -529,62 +593,25 @@
                 return false;
             }
 
-            // Step 2: Try multiple validation methods in parallel
-            const results = await Promise.allSettled([
-                checkWithProxy(testUrl),
-                checkWithIframe(testUrl),
-                checkWithFetch(testUrl)
-            ]);
-
-            // Analyze results - STRICT: Only accept if we have positive confirmation
-            let successCount = 0;
-            let errorCount = 0;
-            let hasClearError = false;
-            let inconclusiveCount = 0;
-
-            for (const result of results) {
-                if (result.status === 'fulfilled') {
-                    if (result.value === true) {
-                        successCount++;
-                    } else if (result.value === false) {
-                        errorCount++;
-                    } else if (result.value === 'error') {
-                        hasClearError = true;
-                    } else if (result.value === null) {
-                        inconclusiveCount++;
-                    }
-                } else {
-                    // Promise rejected
-                    inconclusiveCount++;
-                }
-            }
-
-            // STRICT Decision logic: Only accept if we have positive confirmation
-            if (hasClearError) {
-                // Clear DNS/connection error detected
-                showInvalid('URL is not accessible. Please check the URL and ensure the website is online.');
-                return false;
-            } else if (successCount > 0) {
-                // At least one method succeeded - URL is accessible
+            // Step 2: Check URL accessibility using reliable proxy
+            const isValid = await checkUrlWithProxy(testUrl);
+            
+            if (isValid === true) {
                 showValid('URL is accessible');
                 return true;
-            } else if (errorCount > 0 && successCount === 0) {
-                // All methods failed or returned false - URL is not accessible
-                showInvalid('URL is not accessible. Please check the URL and ensure the website is online.');
-                return false;
             } else {
-                // All methods inconclusive - this shouldn't happen often, but reject to be safe
-                showInvalid('Could not verify URL accessibility. Please check the URL and try again.');
+                showInvalid('URL is not accessible. Please check the URL and ensure the website is online.');
                 return false;
             }
         }
 
-        // Method 1: CORS Proxy Check - Enhanced DNS error detection
-        async function checkWithProxy(url) {
+        // Reliable URL Check using CORS Proxy
+        async function checkUrlWithProxy(url) {
             try {
+                // Use allorigins.win proxy which provides HTTP status codes
                 const proxyUrl = `https://api.allorigins.win/get?url=${encodeURIComponent(url)}`;
                 const controller = new AbortController();
-                const timeoutId = setTimeout(() => controller.abort(), 12000);
+                const timeoutId = setTimeout(() => controller.abort(), 15000);
 
                 const response = await fetch(proxyUrl, {
                     method: 'GET',
@@ -593,233 +620,123 @@
 
                 clearTimeout(timeoutId);
 
-                if (response.ok) {
-                    const data = await response.json();
-                    
-                    // Check HTTP status code
-                    if (data.status) {
-                        const httpCode = data.status.http_code;
-                        const statusMessage = (data.status.message || '').toLowerCase();
-                        const statusUrl = (data.status.url || '').toLowerCase();
-                        const contents = (data.contents || '').toLowerCase();
-                        
-                        // Success codes - URL is accessible
-                        if (httpCode >= 200 && httpCode < 400) {
-                            return true;
-                        }
-                        
-                        // Check for DNS errors in multiple places
-                        const dnsErrorIndicators = [
-                            'nxdomain',
-                            'dns_probe_finished_nxdomain',
-                            'dns',
-                            'name not resolved',
-                            'getaddrinfo',
-                            'enotfound',
-                            'err_name_not_resolved',
-                            'this site can\'t be reached',
-                            'server not found',
-                            'host not found'
-                        ];
-                        
-                        const hasDnsError = dnsErrorIndicators.some(indicator => 
-                            statusMessage.includes(indicator) ||
-                            statusUrl.includes(indicator) ||
-                            contents.includes(indicator)
-                        );
-                        
-                        // Clear DNS/connection errors
-                        if (httpCode === 0 || 
-                            httpCode >= 500 ||
-                            hasDnsError) {
-                            return 'error';
-                        }
-                        
-                        // 4xx errors (client errors)
-                        if (httpCode >= 400 && httpCode < 500) {
-                            // For 404, check if it's actually a DNS error or real 404
-                            if (httpCode === 404) {
-                                // If we have content (even error page), domain exists
-                                if (data.contents && data.contents.length > 100) {
-                                    return true; // Domain exists, page doesn't (still accessible)
-                                }
-                                // No content might mean DNS error
-                                if (hasDnsError) {
-                                    return 'error';
-                                }
-                                // Inconclusive - might be real 404 or DNS error
-                                return false;
-                            }
-                            // Other 4xx - domain exists but has issues
-                            return false;
-                        }
-                    }
-                    
-                    // Check if we got actual HTML content (not error page)
-                    if (data.contents && data.contents.length > 0) {
-                        const content = data.contents.toLowerCase();
-                        // Check if content looks like an error page
-                        if (content.includes('this site can\'t be reached') ||
-                            content.includes('dns_probe_finished_nxdomain') ||
-                            content.includes('err_name_not_resolved') ||
-                            content.includes('server not found')) {
-                            return 'error';
-                        }
-                        // Has content and doesn't look like error page
-                        return true;
-                    }
-                    
-                    // If status exists but no content and no clear success code
-                    if (data.status && data.status.http_code) {
-                        // Check if it's a DNS error
-                        const statusMsg = (data.status.message || '').toLowerCase();
-                        if (statusMsg.includes('nxdomain') || 
-                            statusMsg.includes('dns') || 
-                            statusMsg.includes('name not resolved')) {
-                            return 'error';
-                        }
-                        return false;
-                    }
+                if (!response.ok) {
+                    return false; // Proxy request failed
                 }
+
+                const data = await response.json();
                 
-                // Response not OK - likely an error
-                return false;
-            } catch (error) {
-                // Check error type
-                if (error.name === 'AbortError') {
-                    // Timeout - treat as failure (URL might not be accessible)
+                // Get HTTP status code from the actual URL
+                const httpCode = data.status?.http_code || 0;
+                const contents = data.contents || '';
+                const statusMessage = (data.status?.message || '').toLowerCase();
+                
+                // Check 1: HTTP Status Code
+                // Valid: 200-399 (successful responses and redirects)
+                // Invalid: 0 (DNS/connection error), 400+ (client/server errors)
+                if (httpCode === 0) {
+                    // HTTP code 0 means DNS error or connection failed
                     return false;
                 }
-                // Other network errors - treat as failure
+                
+                if (httpCode >= 400) {
+                    // 4xx and 5xx errors - URL not accessible
+                    return false;
+                }
+                
+                // Check 2: Content validation - must have actual HTML
+                if (!contents || contents.length < 100) {
+                    // No content or too little content - likely an error
+                    return false;
+                }
+                
+                const contentLower = contents.toLowerCase();
+                
+                // Check 3: Look for error page indicators
+                const errorIndicators = [
+                    'this site can\'t be reached',
+                    'dns_probe_finished_nxdomain',
+                    'err_name_not_resolved',
+                    'server not found',
+                    'host not found',
+                    'name not resolved',
+                    'nxdomain',
+                    'connection refused',
+                    'network error',
+                    'site cannot be reached'
+                ];
+                
+                const hasErrorIndicator = errorIndicators.some(indicator => 
+                    contentLower.includes(indicator) || 
+                    statusMessage.includes(indicator)
+                );
+                
+                if (hasErrorIndicator) {
+                    return false; // Contains error page content
+                }
+                
+                // Check 4: Must have HTML structure (real webpage)
+                const hasHtmlStructure = contentLower.includes('<html') || 
+                                         contentLower.includes('<!doctype') ||
+                                         (contentLower.includes('<head') && contentLower.includes('<body'));
+                
+                if (!hasHtmlStructure) {
+                    // Doesn't look like HTML - might be an error response
+                    return false;
+                }
+                
+                // All checks passed: Valid HTTP code (200-399), has content, no error indicators, has HTML structure
+                return true;
+                
+            } catch (error) {
+                // Network error, timeout, or other failure
+                if (error.name === 'AbortError') {
+                    // Timeout - URL might not be accessible
+                    return false;
+                }
+                // Other errors
                 return false;
             }
         }
 
-        // Method 2: Iframe Check - Enhanced DNS error detection
-        function checkWithIframe(url) {
-            return new Promise((resolve) => {
-                let resolved = false;
-                const iframe = document.createElement('iframe');
-                iframe.style.cssText = 'display:none;width:1px;height:1px;position:absolute;left:-9999px;border:none;';
-                iframe.src = url;
-                
-                const timeout = setTimeout(() => {
-                    if (!resolved) {
-                        resolved = true;
-                        if (document.body.contains(iframe)) {
-                            document.body.removeChild(iframe);
-                        }
-                        // Timeout after 10 seconds - likely not accessible
-                        resolve(false);
-                    }
-                }, 10000);
-
-                iframe.onload = () => {
-                    if (!resolved) {
-                        // Wait a bit to check if it's an error page
-                        setTimeout(() => {
-                            if (!resolved) {
-                                try {
-                                    const iframeDoc = iframe.contentDocument || iframe.contentWindow?.document;
-                                    if (iframeDoc) {
-                                        const bodyText = iframeDoc.body?.innerText?.toLowerCase() || '';
-                                        const title = iframeDoc.title?.toLowerCase() || '';
-                                        
-                                        // Check for DNS error pages
-                                        if (bodyText.includes('this site can\'t be reached') ||
-                                            bodyText.includes('dns_probe_finished_nxdomain') ||
-                                            bodyText.includes('err_name_not_resolved') ||
-                                            bodyText.includes('server not found') ||
-                                            title.includes('this site can\'t be reached')) {
-                                            resolved = true;
-                                            clearTimeout(timeout);
-                                            if (document.body.contains(iframe)) {
-                                                document.body.removeChild(iframe);
-                                            }
-                                            resolve(false);
-                                            return;
-                                        }
-                                    }
-                                } catch (e) {
-                                    // CORS - can't check, assume it loaded successfully
-                                }
-                                
-                                resolved = true;
-                                clearTimeout(timeout);
-                                setTimeout(() => {
-                                    if (document.body.contains(iframe)) {
-                                        document.body.removeChild(iframe);
-                                    }
-                                }, 100);
-                                resolve(true); // Loaded successfully
-                            }
-                        }, 500);
-                    }
-                };
-
-                iframe.onerror = () => {
-                    if (!resolved) {
-                        resolved = true;
-                        clearTimeout(timeout);
-                        if (document.body.contains(iframe)) {
-                            document.body.removeChild(iframe);
-                        }
-                        resolve(false); // Error loading
-                    }
-                };
-
-                // Early check for error pages
-                setTimeout(() => {
-                    if (!resolved) {
-                        try {
-                            const iframeDoc = iframe.contentDocument || iframe.contentWindow?.document;
-                            if (iframeDoc) {
-                                const bodyText = iframeDoc.body?.innerText?.toLowerCase() || '';
-                                if (bodyText.includes('this site can\'t be reached') ||
-                                    bodyText.includes('dns_probe_finished_nxdomain') ||
-                                    bodyText.includes('err_name_not_resolved')) {
-                                    if (!resolved) {
-                                        resolved = true;
-                                        clearTimeout(timeout);
-                                        if (document.body.contains(iframe)) {
-                                            document.body.removeChild(iframe);
-                                        }
-                                        resolve(false);
-                                    }
-                                }
-                            }
-                        } catch (e) {
-                            // CORS error - can't check, wait for onload/onerror
-                        }
-                    }
-                }, 2000);
-
-                document.body.appendChild(iframe);
-            });
-        }
-
-        // Method 3: Fetch Check (with no-cors)
-        async function checkWithFetch(url) {
-            try {
-                const controller = new AbortController();
-                const timeoutId = setTimeout(() => controller.abort(), 5000);
-                
-                await fetch(url, {
-                    method: 'HEAD',
-                    mode: 'no-cors',
-                    signal: controller.signal
-                });
-                
-                clearTimeout(timeoutId);
-                return true; // No error = likely accessible
-            } catch (error) {
-                // Check error type
-                if (error.name === 'AbortError') {
-                    return null; // Timeout = inconclusive
-                }
-                return false; // Other error
+        // Check URL button event listener
+        document.getElementById('checkUrlBtn').addEventListener('click', async function() {
+            const urlInput = document.getElementById('targetUrl');
+            const targetUrl = urlInput.value.trim();
+            const checkBtn = this;
+            
+            if (!targetUrl) {
+                alert('Please enter a URL first');
+                return;
             }
-        }
+            
+            // Disable button during validation
+            checkBtn.disabled = true;
+            checkBtn.textContent = 'Checking...';
+            
+            // Validate URL
+            await validateUrlAccessibility(targetUrl);
+            
+            // Re-enable button
+            checkBtn.disabled = false;
+            checkBtn.textContent = 'Check';
+        });
+
+        // Checkbox change event listener
+        document.getElementById('urlVerifiedCheckbox').addEventListener('change', function() {
+            updateSubmitButton();
+        });
+
+        // URL input change event listener - reset checkbox when URL changes
+        document.getElementById('targetUrl').addEventListener('input', function() {
+            const checkbox = document.getElementById('urlVerifiedCheckbox');
+            const checkboxContainer = document.getElementById('urlCheckboxContainer');
+            
+            // Reset checkbox and hide container when URL changes
+            checkbox.checked = false;
+            checkboxContainer.classList.add('hidden');
+            updateSubmitButton();
+        });
 
         // Form submission handler
         document.getElementById('reportForm').addEventListener('submit', async function(e) {
@@ -846,13 +763,10 @@
                 return;
             }
 
-            // Validate URL accessibility
-            showLoading('Validating URL accessibility...');
-            const isUrlValid = await validateUrlAccessibility(targetUrl);
-            hideLoading();
-
-            if (!isUrlValid) {
-                showError('The URL you entered is not accessible. Please check the URL and ensure the website is online.');
+            // Check if URL is verified via checkbox
+            const urlCheckbox = document.getElementById('urlVerifiedCheckbox');
+            if (!urlCheckbox || !urlCheckbox.checked) {
+                showError('Please verify the URL by clicking the "Check" button and confirming it is correct.');
                 return;
             }
 
