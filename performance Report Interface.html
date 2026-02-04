@@ -1,0 +1,442 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>SEO Performance Report - ProgrammX</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+        body {
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            background: #ffc0cb;
+            min-height: 100vh;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            padding: 20px;
+        }
+        /* Header with Logo */
+        .header {
+            text-align: center;
+            margin-bottom: 30px;
+        }
+        .logo-container {
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            gap: 15px;
+            margin-bottom: 15px;
+        }
+        .logo-img {
+            width: 70px;
+            height: 70px;
+            object-fit: contain;
+            filter: drop-shadow(0 0 10px rgba(0, 100, 200, 0.3));
+        }
+        .company-name {
+            font-size: 36px;
+            font-weight: 700;
+            color: #1e3a8a;
+            text-shadow: 0 0 10px rgba(30, 58, 138, 0.2);
+        }
+        .container {
+            background: #ffb6c1;
+            border: 4px solid #000000;
+            border-radius: 20px;
+            box-shadow: 0 20px 60px rgba(0, 0, 0, 0.2), 0 0 30px rgba(255, 182, 193, 0.5);
+            max-width: 900px;
+            width: 100%;
+            padding: 40px;
+        }
+        h1 {
+            color: #1e3a8a;
+            margin-bottom: 10px;
+            text-align: center;
+            font-size: 28px;
+            text-shadow: 0 0 5px rgba(30, 58, 138, 0.2);
+        }
+        .subtitle {
+            text-align: center;
+            color: #1e40af;
+            margin-bottom: 30px;
+            font-size: 14px;
+        }
+        .form-group {
+            margin-bottom: 25px;
+        }
+        .form-group label {
+            display: block;
+            margin-bottom: 8px;
+            color: #1e3a8a;
+            font-weight: 600;
+            font-size: 14px;
+        }
+        input[type="text"],
+        input[type="email"],
+        input[type="url"],
+        input[type="date"],
+        select {
+            width: 100%;
+            padding: 12px 16px;
+            border: 2px solid rgba(30, 58, 138, 0.3);
+            background: rgba(255, 255, 255, 0.8);
+            border-radius: 10px;
+            font-size: 15px;
+            transition: all 0.3s ease;
+            font-family: inherit;
+            color: #1e3a8a;
+        }
+        input[type="text"]:focus,
+        input[type="email"]:focus,
+        input[type="url"]:focus,
+        input[type="date"]:focus,
+        select:focus {
+            outline: none;
+            border-color: #1e3a8a;
+            background: rgba(255, 255, 255, 0.95);
+            box-shadow: 0 0 0 3px rgba(30, 58, 138, 0.2);
+        }
+        input[type="text"]::placeholder,
+        input[type="email"]::placeholder,
+        input[type="url"]::placeholder {
+            color: #64748b;
+        }
+        .submit-btn {
+            width: 100%;
+            padding: 16px;
+            background: linear-gradient(135deg, #ff69b4 0%, #ff1493 100%);
+            color: #ffffff;
+            border: none;
+            border-radius: 10px;
+            font-size: 16px;
+            font-weight: 600;
+            cursor: pointer;
+            transition: all 0.3s ease;
+            margin-top: 10px;
+            box-shadow: 0 4px 15px rgba(255, 105, 180, 0.4);
+        }
+        .submit-btn:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 6px 20px rgba(255, 105, 180, 0.5);
+            background: linear-gradient(135deg, #ff1493 0%, #ff69b4 100%);
+        }
+        .submit-btn:active {
+            transform: translateY(0);
+        }
+        .submit-btn:disabled {
+            opacity: 0.6;
+            cursor: not-allowed;
+            transform: none;
+        }
+        .loading {
+            display: none;
+            text-align: center;
+            margin-top: 20px;
+            color: #1e3a8a;
+            font-weight: 500;
+        }
+        .loading.show {
+            display: block;
+        }
+        .success-message,
+        .error-message {
+            display: none;
+            padding: 15px;
+            border-radius: 10px;
+            margin-top: 20px;
+            font-size: 14px;
+        }
+        .success-message.show,
+        .error-message.show {
+            display: block;
+        }
+        .hidden {
+            display: none;
+        }
+        .spinner {
+            border: 3px solid rgba(30, 58, 138, 0.3);
+            border-top: 3px solid #1e3a8a;
+            border-radius: 50%;
+            width: 20px;
+            height: 20px;
+            animation: spin 1s linear infinite;
+            display: inline-block;
+            margin-right: 10px;
+            vertical-align: middle;
+        }
+        @keyframes spin {
+            0% { transform: rotate(0deg); }
+            100% { transform: rotate(360deg); }
+        }
+        .info-text {
+            font-size: 12px;
+            color: #1e40af;
+            margin-top: 5px;
+        }
+        .success-message {
+            background: rgba(76, 175, 80, 0.2);
+            color: #155724;
+            border: 1px solid rgba(76, 175, 80, 0.4);
+        }
+        .error-message {
+            background: rgba(244, 67, 54, 0.2);
+            color: #721c24;
+            border: 1px solid rgba(244, 67, 54, 0.4);
+        }
+        .url-validation {
+            display: flex;
+            align-items: center;
+            gap: 8px;
+            margin-top: 5px;
+            font-size: 12px;
+        }
+        .url-validation.checking {
+            color: #1e3a8a;
+        }
+        .url-validation.valid {
+            color: #155724;
+        }
+        .url-validation.invalid {
+            color: #721c24;
+        }
+        .url-validation-icon {
+            width: 14px;
+            height: 14px;
+            display: inline-block;
+        }
+        input[type="url"].validating {
+            border-color: #1e3a8a;
+        }
+        input[type="url"].valid {
+            border-color: #4caf50;
+        }
+        input[type="url"].invalid {
+            border-color: #f44336;
+        }
+        .date-group {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 12px;
+        }
+        .date-group label {
+            font-size: 12px;
+            margin-bottom: 5px;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <!-- Header with Logo -->
+        <div class="header">
+            <div class="logo-container">
+                <img src="https://media.licdn.com/dms/image/v2/D4D0BAQFdJWk29TWi5w/company-logo_200_200/company-logo_200_200/0/1732531337286/programm_x_logo?e=2147483647&v=beta&t=8-SdZwxwzOq-_NdDj7_1qNinTam4kB-wFb5I8_a0Pc4" 
+                     alt="ProgrammX Logo" 
+                     class="logo-img">
+                <div class="company-name">ProgrammX</div>
+            </div>
+        </div>
+        <h1>📈 SEO Performance Report</h1>
+        <p class="subtitle">Generate detailed SEO performance and progress analysis for your website</p>
+        <form id="reportForm">
+            <!-- Target URL -->
+            <div class="form-group">
+                <label for="targetUrl">Target URL *</label>
+                <input type="url" id="targetUrl" name="targetUrl" placeholder="https://www.example.com/" required>
+                <p class="info-text">Enter the website URL to analyze</p>
+            </div>
+
+            <!-- Email -->
+            <div class="form-group">
+                <label for="email">Email Address *</label>
+                <input type="email" id="email" name="email" placeholder="your.email@example.com" required>
+                <p class="info-text">Report will be sent to this email</p>
+            </div>
+
+            <!-- Location -->
+            <div class="form-group">
+                <label for="location">Location *</label>
+                <input type="text" id="location" name="location" placeholder="United Kingdom" value="United Kingdom" required>
+                <p class="info-text">Target location for SEO analysis</p>
+            </div>
+
+            <!-- Report Audience -->
+            <div class="form-group">
+                <label for="reportAudience">Report Audience *</label>
+                <select id="reportAudience" name="reportAudience" required>
+                    <option value="client" selected>Client</option>
+                    <option value="internal">Internal</option>
+                </select>
+                <p class="info-text">Choose whether this report is for a client or internal team use</p>
+            </div>
+
+            <!-- Date Range -->
+            <div class="form-group">
+                <label>Date Range *</label>
+                <div class="date-group">
+                    <div>
+                        <label for="dateFrom" style="font-size: 12px; margin-bottom: 5px;">From Date</label>
+                        <input type="date" id="dateFrom" name="dateFrom" required>
+                    </div>
+                    <div>
+                        <label for="dateTo" style="font-size: 12px; margin-bottom: 5px;">To Date</label>
+                        <input type="date" id="dateTo" name="dateTo" required>
+                    </div>
+                </div>
+                <p class="info-text">Select the period for the report analysis</p>
+            </div>
+
+            <!-- Submit Button -->
+            <button type="submit" class="submit-btn" id="submitBtn">
+                Generate Report
+            </button>
+
+            <!-- Loading Indicator -->
+            <div class="loading" id="loading">
+                <div class="spinner"></div>
+                <span>Generating report... This may take a few minutes.</span>
+            </div>
+
+            <!-- Success Message -->
+            <div class="success-message" id="successMessage">
+                ✅ Report generation started successfully! The report will be sent to your email within 5-10 minutes.
+            </div>
+
+            <!-- Error Message -->
+            <div class="error-message" id="errorMessage">
+                ❌ An error occurred. Please check your inputs and try again.
+            </div>
+        </form>
+    </div>
+    <script>
+        // Set default dates (last 30 days) on page load
+        window.addEventListener('DOMContentLoaded', function() {
+            const today = new Date();
+            const thirtyDaysAgo = new Date();
+            thirtyDaysAgo.setDate(today.getDate() - 30);
+            
+            document.getElementById('dateTo').value = today.toISOString().split('T')[0];
+            document.getElementById('dateFrom').value = thirtyDaysAgo.toISOString().split('T')[0];
+        });
+
+        // Form submission handler
+        document.getElementById('reportForm').addEventListener('submit', async function(e) {
+            e.preventDefault();
+
+            // Hide previous messages
+            document.getElementById('successMessage').classList.remove('show');
+            document.getElementById('errorMessage').classList.remove('show');
+
+            // Get form values
+            const targetUrl = document.getElementById('targetUrl').value.trim();
+            const email = document.getElementById('email').value.trim();
+            const location = document.getElementById('location').value.trim() || 'United Kingdom';
+            const reportAudience = document.getElementById('reportAudience').value;
+            const dateFrom = document.getElementById('dateFrom').value;
+            const dateTo = document.getElementById('dateTo').value;
+
+            // Validate required fields
+            if (!targetUrl || !email || !reportAudience || !dateFrom || !dateTo) {
+                showError('Please fill in all required fields');
+                return;
+            }
+
+            // Validate date range
+            if (new Date(dateFrom) > new Date(dateTo)) {
+                showError('From date must be before or equal to To date');
+                return;
+            }
+
+            // Build request payload
+            const payload = {
+                target_url: targetUrl,
+                email: email,
+                location: location,
+                report_type: 'progress',
+                report_audience: reportAudience,
+                date_from: dateFrom,
+                date_to: dateTo
+            };
+
+            // Show loading state
+            showLoading('Submitting report request...');
+
+            try {
+                // Make API request
+                const response = await fetch('https://n8n.programmx.com/webhook/SEO-Performance-Report', {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json',
+                    },
+                    body: JSON.stringify(payload)
+                });
+
+                // Check response
+                if (response.ok || response.status === 200 || response.status === 201) {
+                    showSuccess();
+                    // Reset form after 5 seconds
+                    setTimeout(() => {
+                        resetForm();
+                    }, 5000);
+                } else {
+                    const errorData = await response.text();
+                    showError(`Server error: ${response.status}. ${errorData}`);
+                }
+            } catch (error) {
+                console.error('Error:', error);
+                showError(`Network error: ${error.message}`);
+            } finally {
+                hideLoading();
+            }
+        });
+
+        // Helper functions
+        function showLoading(message = 'Generating report... This may take a few minutes.') {
+            const loadingDiv = document.getElementById('loading');
+            const loadingText = loadingDiv.querySelector('span');
+            if (loadingText) {
+                loadingText.textContent = message;
+            }
+            loadingDiv.classList.add('show');
+            document.getElementById('submitBtn').disabled = true;
+        }
+
+        function hideLoading() {
+            document.getElementById('loading').classList.remove('show');
+            document.getElementById('submitBtn').disabled = false;
+        }
+
+        function showSuccess() {
+            document.getElementById('successMessage').classList.add('show');
+        }
+
+        function showError(message) {
+            const errorDiv = document.getElementById('errorMessage');
+            errorDiv.textContent = `❌ ${message}`;
+            errorDiv.classList.add('show');
+        }
+
+        function resetForm() {
+            document.getElementById('reportForm').reset();
+            document.getElementById('location').value = 'United Kingdom';
+            
+            // Reset dates to default (last 30 days)
+            const today = new Date();
+            const thirtyDaysAgo = new Date();
+            thirtyDaysAgo.setDate(today.getDate() - 30);
+            
+            document.getElementById('dateTo').value = today.toISOString().split('T')[0];
+            document.getElementById('dateFrom').value = thirtyDaysAgo.toISOString().split('T')[0];
+            
+            document.getElementById('successMessage').classList.remove('show');
+            document.getElementById('errorMessage').classList.remove('show');
+        }
+    </script>
+</body>
+</html>
+
+
+
