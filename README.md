@@ -1,3 +1,12 @@
+<p align="center">
+  <a href="https://programmx.com">
+    <picture>
+      <source media="(prefers-color-scheme: dark)" srcset="https://raw.githubusercontent.com/programmxhq/.github/main/brand/logo-dark.png">
+      <img src="https://raw.githubusercontent.com/programmxhq/.github/main/brand/logo-light.png" alt="ProgrammX" width="300">
+    </picture>
+  </a>
+</p>
+
 # SEO Reports Automation
 
 Automated SEO reporting workflow that generates comprehensive SEO analysis reports using DataForSEO API and AI.
@@ -84,3 +93,6 @@ curl -X POST "https://n8n.programmx.com/webhook/ProgressReport" \
 - OnPage analysis: ~5 minutes wait time
 - Total workflow: ~5-10 minutes
 
+---
+
+<sub>Built by <a href="https://programmx.com">ProgrammX</a> — AI & blockchain product studio · <a href="mailto:hello@programmx.com">hello@programmx.com</a></sub>
